@@ -9,6 +9,7 @@ function createSignaturePad(wrapper) {
 	let hasSignature = false;
 	let initialWidth, initialHeight;
 	const scaleFactor = 2; // Increase this for even higher resolution
+	let aspectRatio;
 
 	// Get customizable attributes from canvas
 	const lineColor = canvas.dataset.padColor || 'black';
@@ -23,18 +24,35 @@ function createSignaturePad(wrapper) {
 		tempCanvas.height = canvas.height;
 		tempCtx.drawImage(canvas, 0, 0);
 
-		const rect = canvas.getBoundingClientRect();
-		// Use initial dimensions if available, otherwise use current rect
-		const displayWidth = initialWidth || rect.width;
-		const displayHeight = initialHeight || rect.height;
+		const rect = wrapper.getBoundingClientRect();
+		let newWidth = rect.width;
+		let newHeight;
+
+		if (!aspectRatio) {
+			// Initialize aspect ratio if not set
+			aspectRatio = initialHeight / initialWidth;
+		}
+
+		// Calculate new height based on aspect ratio
+		newHeight = newWidth * aspectRatio;
+
+		// Adjust if new height exceeds wrapper height
+		if (newHeight > rect.height) {
+			newHeight = rect.height;
+			newWidth = newHeight / aspectRatio;
+		}
+
+		// Update initial dimensions
+		initialWidth = newWidth;
+		initialHeight = newHeight;
 
 		// Set the canvas size to scaleFactor times the display size
-		canvas.width = displayWidth * scaleFactor;
-		canvas.height = displayHeight * scaleFactor;
+		canvas.width = newWidth * scaleFactor;
+		canvas.height = newHeight * scaleFactor;
 
 		// Set the CSS size to match the display size
-		canvas.style.width = `${displayWidth}px`;
-		canvas.style.height = `${displayHeight}px`;
+		canvas.style.width = `${newWidth}px`;
+		canvas.style.height = `${newHeight}px`;
 
 		ctx.scale(scaleFactor, scaleFactor);
 
@@ -44,11 +62,8 @@ function createSignaturePad(wrapper) {
 		ctx.strokeStyle = lineColor;
 		ctx.fillStyle = lineColor;
 
-		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, displayWidth, displayHeight);
-
-		// Store initial dimensions if not set
-		if (!initialWidth) initialWidth = displayWidth;
-		if (!initialHeight) initialHeight = displayHeight;
+		// Draw the existing content scaled to the new size
+		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, newWidth, newHeight);
 	}
 
 	function clearPad() {
@@ -106,6 +121,10 @@ function createSignaturePad(wrapper) {
 
 	function initializePad() {
 		if (isElementVisible(wrapper)) {
+			const rect = wrapper.getBoundingClientRect();
+			initialWidth = rect.width;
+			initialHeight = rect.height;
+			aspectRatio = initialHeight / initialWidth;
 			resizeCanvas();
 			attachEventListeners();
 		}
