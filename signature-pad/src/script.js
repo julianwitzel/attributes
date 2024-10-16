@@ -6,7 +6,7 @@ function createSignaturePad(wrapper) {
 	let writingMode = false;
 	let lastX, lastY;
 	let hasSignature = false;
-	const scaleFactor = 2; // Increase this for even higher resolution
+	const scaleFactor = 2;
 
 	// Get customizable attributes from canvas
 	const lineColor = canvas.dataset.padColor || 'black';
@@ -19,11 +19,11 @@ function createSignaturePad(wrapper) {
 		const displayWidth = rect.width;
 		const displayHeight = rect.height;
 
-		// Set the canvas size to scaleFactor times the display size
+		// Set canvas size to double the wrapper size
 		canvas.width = displayWidth * scaleFactor;
 		canvas.height = displayHeight * scaleFactor;
 
-		// Set the CSS size to match the display size
+		// Set CSS size to match wrapper size
 		canvas.style.width = `${displayWidth}px`;
 		canvas.style.height = `${displayHeight}px`;
 
@@ -45,7 +45,7 @@ function createSignaturePad(wrapper) {
 	}
 
 	function clearPad() {
-		ctx.clearRect(0, 0, canvas.width / scaleFactor, canvas.height / scaleFactor);
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		hiddenInput.value = '';
 		hasSignature = false;
 	}
@@ -54,7 +54,7 @@ function createSignaturePad(wrapper) {
 		const rect = canvas.getBoundingClientRect();
 		const scaleX = canvas.width / rect.width;
 		const scaleY = canvas.height / rect.height;
-		return [(event.clientX - rect.left) * (scaleX / scaleFactor), (event.clientY - rect.top) * (scaleY / scaleFactor)];
+		return [(event.clientX - rect.left) * scaleX, (event.clientY - rect.top) * scaleY];
 	}
 
 	function handlePointerMove(event) {
