@@ -17,6 +17,9 @@ function createSignaturePad(wrapper) {
 	const padScale = parseFloat(canvas.dataset.padScale) || 2;
 	const smoothFactor = parseFloat(canvas.dataset.padSmoothFactor) || 0.3;
 	const pressureSensitivity = parseFloat(canvas.dataset.padPressureSensitivity) || 0.5;
+	const minThickness = parseFloat(canvas.dataset.padMinThickness) || lineThickness / 2;
+	const maxThickness = parseFloat(canvas.dataset.padMaxThickness) || lineThickness * 2;
+	let lastTimestamp = 0;
 
 	let points = [];
 
@@ -63,12 +66,37 @@ function createSignaturePad(wrapper) {
 		return [(event.clientX - rect.left) * scaleX, (event.clientY - rect.top) * scaleY];
 	}
 
+	function getLineThickness(x, y, timestamp) {
+		if (lastTimestamp === 0) {
+			lastTimestamp = timestamp;
+			return maxThickness;
+		}
+
+		const dx = x - lastX;
+		const dy = y - lastY;
+		const dt = timestamp - lastTimestamp;
+		const speed = Math.sqrt(dx * dx + dy * dy) / dt;
+
+		// Adjust these values to fine-tune the thickness variation
+		const minSpeed = 0.5;
+		const maxSpeed = 10;
+
+		// Inverse relationship: faster speed = thinner line
+		let thickness = maxThickness - ((speed - minSpeed) / (maxSpeed - minSpeed)) * (maxThickness - minThickness);
+		thickness = Math.min(Math.max(thickness, minThickness), maxThickness);
+
+		lastTimestamp = timestamp;
+		return thickness;
+	}
+
 	function handlePointerMove(event) {
 		if (!writingMode) return;
 		event.preventDefault();
 
 		const [positionX, positionY] = getTargetPosition(event);
-		points.push({ x: positionX, y: positionY });
+		const thickness = getLineThickness(positionX, positionY, event.timeStamp);
+
+		points.push({ x: positionX, y: positionY, thickness: thickness });
 
 		if (points.length > 2) {
 			const xc = (points[points.length - 1].x + points[points.length - 2].x) / 2;
@@ -76,13 +104,14 @@ function createSignaturePad(wrapper) {
 
 			ctx.beginPath();
 			ctx.moveTo(lastX, lastY);
+			ctx.lineWidth = thickness;
 			ctx.quadraticCurveTo(points[points.length - 2].x, points[points.length - 2].y, xc, yc);
 			ctx.stroke();
 
 			[lastX, lastY] = [xc, yc];
 		} else {
-			// For the first move after a pointer down, draw a line from the initial point
 			ctx.beginPath();
+			ctx.lineWidth = thickness;
 			ctx.moveTo(lastX, lastY);
 			ctx.lineTo(positionX, positionY);
 			ctx.stroke();
@@ -111,11 +140,11 @@ function createSignaturePad(wrapper) {
 		writingMode = true;
 		points = [];
 		[lastX, lastY] = getTargetPosition(event);
-		points.push({ x: lastX, y: lastY });
+		lastTimestamp = event.timeStamp;
 
 		// Draw a dot for single taps/clicks
 		ctx.beginPath();
-		ctx.arc(lastX, lastY, ctx.lineWidth / 2, 0, Math.PI * 2);
+		ctx.arc(lastX, lastY, maxThickness / 2, 0, Math.PI * 2);
 		ctx.fill();
 
 		hasSignature = true;
