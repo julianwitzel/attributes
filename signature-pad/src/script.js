@@ -1,3 +1,4 @@
+// Function to create a signature pad instance
 function createSignaturePad(wrapper) {
 	const canvas = wrapper.querySelector('canvas');
 	let hiddenInput = wrapper.querySelector('input[type="hidden"]');
@@ -6,7 +7,7 @@ function createSignaturePad(wrapper) {
 	let writingMode = false;
 	let lastX, lastY;
 	let hasSignature = false;
-	const scaleFactor = 2;
+	let initialWidth, initialHeight; // Store initial dimensions
 
 	// Get customizable attributes from canvas
 	const lineColor = canvas.dataset.padColor || 'black';
@@ -15,33 +16,27 @@ function createSignaturePad(wrapper) {
 	const lineCap = canvas.dataset.padLineCap || 'round';
 
 	function resizeCanvas() {
-		const rect = wrapper.getBoundingClientRect();
-		const displayWidth = rect.width;
-		const displayHeight = rect.height;
+		const tempCanvas = document.createElement('canvas');
+		const tempCtx = tempCanvas.getContext('2d');
+		tempCanvas.width = canvas.width;
+		tempCanvas.height = canvas.height;
+		tempCtx.drawImage(canvas, 0, 0);
 
-		// Set canvas size to double the wrapper size
-		canvas.width = displayWidth * scaleFactor;
-		canvas.height = displayHeight * scaleFactor;
+		const rect = canvas.getBoundingClientRect();
+		// Use initial dimensions if available, otherwise use current rect
+		canvas.width = initialWidth || rect.width;
+		canvas.height = initialHeight || rect.height;
 
-		// Set CSS size to match wrapper size
-		canvas.style.width = `${displayWidth}px`;
-		canvas.style.height = `${displayHeight}px`;
-
-		// Scale the context
-		ctx.scale(scaleFactor, scaleFactor);
-
-		// Set drawing styles
 		ctx.lineWidth = lineThickness;
 		ctx.lineJoin = lineJoin;
 		ctx.lineCap = lineCap;
 		ctx.strokeStyle = lineColor;
 		ctx.fillStyle = lineColor;
+		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
 
-		// Redraw signature if exists
-		if (hasSignature) {
-			const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-			ctx.putImageData(imageData, 0, 0);
-		}
+		// Store initial dimensions if not set
+		if (!initialWidth) initialWidth = canvas.width;
+		if (!initialHeight) initialHeight = canvas.height;
 	}
 
 	function clearPad() {
@@ -127,21 +122,22 @@ function createSignaturePad(wrapper) {
 	initializePad();
 	wrapper.initializeSignaturePad = initializePad;
 
-	window.addEventListener('resize', debounce(initializePad, 250));
+	window.addEventListener('resize', throttle(initializePad, 250));
 
 	return initializePad;
 }
 
-// Debounce function
-function debounce(func, wait) {
-	let timeout;
-	return function executedFunction(...args) {
-		const later = () => {
-			clearTimeout(timeout);
-			func(...args);
-		};
-		clearTimeout(timeout);
-		timeout = setTimeout(later, wait);
+// Throttle function
+function throttle(func, limit) {
+	let inThrottle;
+	return function () {
+		const args = arguments;
+		const context = this;
+		if (!inThrottle) {
+			func.apply(context, args);
+			inThrottle = true;
+			setTimeout(() => (inThrottle = false), limit);
+		}
 	};
 }
 
