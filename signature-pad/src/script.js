@@ -130,6 +130,7 @@ function createSignaturePad(wrapper) {
 
 	function handlePointerUp() {
 		writingMode = false;
+		canvas.classList.remove('signing');
 		if (hasSignature) {
 			const imageURL = canvas.toDataURL();
 			if (!hiddenInput) {
@@ -144,6 +145,9 @@ function createSignaturePad(wrapper) {
 	}
 
 	function handlePointerDown(event) {
+		if (writingMode) return;
+		event.preventDefault();
+
 		writingMode = true;
 		points = [];
 		recentThicknesses.length = 0;
@@ -156,6 +160,8 @@ function createSignaturePad(wrapper) {
 		ctx.fill();
 
 		hasSignature = true;
+
+		canvas.classList.add('signing');
 	}
 
 	function preventDefault(event) {
