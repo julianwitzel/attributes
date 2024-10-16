@@ -7,8 +7,7 @@ function createSignaturePad(wrapper) {
 	let writingMode = false;
 	let lastX, lastY;
 	let hasSignature = false;
-	let initialWidth, initialHeight;
-	let isInitialized = false;
+	let initialWidth, initialHeight; // Store initial dimensions
 
 	// Get customizable attributes from canvas
 	const lineColor = canvas.dataset.padColor || 'black';
@@ -18,41 +17,32 @@ function createSignaturePad(wrapper) {
 	const padScale = canvas.dataset.padScale || 2;
 
 	function resizeCanvas() {
-		const rect = wrapper.getBoundingClientRect();
+		const tempCanvas = document.createElement('canvas');
+		const tempCtx = tempCanvas.getContext('2d');
+		tempCanvas.width = canvas.width;
+		tempCanvas.height = canvas.height;
+		tempCtx.drawImage(canvas, 0, 0);
 
-		if (!isInitialized) {
-			// First-time initialization
-			initialWidth = rect.width;
-			initialHeight = rect.height;
-			canvas.width = initialWidth * padScale;
-			canvas.height = initialHeight * padScale;
-			isInitialized = true;
-		} else {
-			// For subsequent resizes, maintain the high-resolution but adapt to new wrapper size
-			const tempCanvas = document.createElement('canvas');
-			const tempCtx = tempCanvas.getContext('2d');
-			tempCanvas.width = canvas.width;
-			tempCanvas.height = canvas.height;
-			tempCtx.drawImage(canvas, 0, 0);
+		const rect = canvas.getBoundingClientRect();
 
+		if (!initialWidth || !initialHeight) {
+			// First-time setup: apply padScale
 			canvas.width = rect.width * padScale;
 			canvas.height = rect.height * padScale;
-
-			// Redraw the existing content
-			ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
+			initialWidth = rect.width; // Store the unscaled width
+			initialHeight = rect.height; // Store the unscaled height
+		} else {
+			// Subsequent resizes: use initial dimensions without re-applying padScale
+			canvas.width = initialWidth * padScale;
+			canvas.height = initialHeight * padScale;
 		}
 
-		// Set the CSS dimensions to match the wrapper
-		canvas.style.width = `${rect.width}px`;
-		canvas.style.height = `${rect.height}px`;
-
-		// Set up the context
-		ctx.scale(padScale, padScale);
-		ctx.lineWidth = lineThickness;
+		ctx.lineWidth = lineThickness * padScale;
 		ctx.lineJoin = lineJoin;
 		ctx.lineCap = lineCap;
 		ctx.strokeStyle = lineColor;
 		ctx.fillStyle = lineColor;
+		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
 	}
 
 	function clearPad() {
