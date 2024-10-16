@@ -6,7 +6,7 @@ function createSignaturePad(wrapper) {
 	const ctx = canvas.getContext('2d');
 	let writingMode = false;
 	let lastX, lastY;
-	let hasSignature = false; // New variable to track if actual drawing has occurred
+	let hasSignature = false;
 	let lastWidth = 0;
 	let lastHeight = 0;
 
@@ -21,39 +21,42 @@ function createSignaturePad(wrapper) {
 		const newWidth = rect.width;
 		const newHeight = rect.height;
 
-		// Only resize if the dimensions have changed significantly
-		if (Math.abs(newWidth - lastWidth) > 1 || Math.abs(newHeight - lastHeight) > 1) {
-			const tempCanvas = document.createElement('canvas');
-			const tempCtx = tempCanvas.getContext('2d');
-			tempCanvas.width = canvas.width;
-			tempCanvas.height = canvas.height;
-			tempCtx.drawImage(canvas, 0, 0);
-
-			canvas.width = newWidth;
-			canvas.height = newHeight;
-
-			ctx.lineWidth = lineThickness;
-			ctx.lineJoin = lineJoin;
-			ctx.lineCap = lineCap;
-			ctx.strokeStyle = lineColor;
-			ctx.fillStyle = lineColor;
-
-			// Maintain aspect ratio when redrawing
-			const scale = Math.min(newWidth / lastWidth, newHeight / lastHeight);
-			const offsetX = (newWidth - lastWidth * scale) / 2;
-			const offsetY = (newHeight - lastHeight * scale) / 2;
-
-			ctx.drawImage(tempCanvas, 0, 0, lastWidth, lastHeight, offsetX, offsetY, lastWidth * scale, lastHeight * scale);
-
-			lastWidth = newWidth;
-			lastHeight = newHeight;
+		if (newWidth === lastWidth && newHeight === lastHeight) {
+			return; // No need to resize
 		}
+
+		const tempCanvas = document.createElement('canvas');
+		const tempCtx = tempCanvas.getContext('2d');
+		tempCanvas.width = canvas.width;
+		tempCanvas.height = canvas.height;
+		tempCtx.drawImage(canvas, 0, 0);
+
+		canvas.width = newWidth;
+		canvas.height = newHeight;
+
+		ctx.lineWidth = lineThickness;
+		ctx.lineJoin = lineJoin;
+		ctx.lineCap = lineCap;
+		ctx.strokeStyle = lineColor;
+		ctx.fillStyle = lineColor;
+
+		if (lastWidth > 0 && lastHeight > 0) {
+			// Only scale if we have previous dimensions
+			const scaleX = newWidth / lastWidth;
+			const scaleY = newHeight / lastHeight;
+			ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+			ctx.drawImage(tempCanvas, 0, 0);
+			ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+		}
+
+		lastWidth = newWidth;
+		lastHeight = newHeight;
 	}
 
 	function clearPad() {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		hiddenInput.value = '';
-		hasSignature = false; // Reset hasSignature when clearing
+		hasSignature = false;
 	}
 
 	function getTargetPosition(event) {
@@ -71,13 +74,12 @@ function createSignaturePad(wrapper) {
 		ctx.lineTo(positionX, positionY);
 		ctx.stroke();
 		[lastX, lastY] = [positionX, positionY];
-		hasSignature = true; // Set hasSignature to true when drawing
+		hasSignature = true;
 	}
 
 	function handlePointerUp() {
 		writingMode = false;
 		if (hasSignature) {
-			// Only update hidden input if there's a signature
 			const imageURL = canvas.toDataURL();
 			if (!hiddenInput) {
 				hiddenInput = document.createElement('input');
@@ -93,11 +95,10 @@ function createSignaturePad(wrapper) {
 		writingMode = true;
 		[lastX, lastY] = getTargetPosition(event);
 
-		// Draw a dot for single taps/clicks
 		ctx.beginPath();
 		ctx.arc(lastX, lastY, lineThickness / 2, 0, Math.PI * 2);
 		ctx.fill();
-		hasSignature = true; // Set hasSignature to true when drawing a dot
+		hasSignature = true;
 	}
 
 	function preventDefault(event) {
@@ -106,9 +107,6 @@ function createSignaturePad(wrapper) {
 
 	function initializePad() {
 		if (isElementVisible(wrapper)) {
-			const rect = canvas.getBoundingClientRect();
-			lastWidth = rect.width;
-			lastHeight = rect.height;
 			resizeCanvas();
 			attachEventListeners();
 		}
@@ -130,32 +128,24 @@ function createSignaturePad(wrapper) {
 		canvas.addEventListener('touchcancel', preventDefault, { passive: false });
 	}
 
-	// Check if an element is visible
 	function isElementVisible(element) {
 		return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
 	}
 
-	// Initial setup
 	initializePad();
-
-	// Expose initializePad function
 	wrapper.initializeSignaturePad = initializePad;
 
-	// Event listener for window resize with debounce
-	window.addEventListener(
-		'resize',
-		debounce(() => {
-			if (isElementVisible(wrapper)) {
-				resizeCanvas();
-			}
-		}, 250)
-	);
+	const debouncedResize = debounce(() => {
+		if (isElementVisible(wrapper)) {
+			resizeCanvas();
+		}
+	}, 250);
 
-	// Return the initialize function for external use
+	window.addEventListener('resize', debouncedResize);
+
 	return initializePad;
 }
 
-// Debounce function
 function debounce(func, wait) {
 	let timeout;
 	return function executedFunction(...args) {
@@ -179,7 +169,6 @@ if (document.readyState === 'loading') {
 	window.addEventListener('load', initializeAllSignaturePads);
 }
 
-// initialize a specific signature pad
 function initializeSignaturePad(wrapperId) {
 	const wrapper = document.getElementById(wrapperId);
 	if (wrapper && wrapper.initializeSignaturePad) {
