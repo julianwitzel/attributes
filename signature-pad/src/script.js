@@ -80,6 +80,13 @@ function createSignaturePad(wrapper) {
 			ctx.stroke();
 
 			[lastX, lastY] = [xc, yc];
+		} else {
+			// For the first move after a pointer down, draw a line from the initial point
+			ctx.beginPath();
+			ctx.moveTo(lastX, lastY);
+			ctx.lineTo(positionX, positionY);
+			ctx.stroke();
+			[lastX, lastY] = [positionX, positionY];
 		}
 
 		hasSignature = true;
@@ -106,10 +113,10 @@ function createSignaturePad(wrapper) {
 		[lastX, lastY] = getTargetPosition(event);
 		points.push({ x: lastX, y: lastY });
 
+		// Draw a dot for single taps/clicks
 		ctx.beginPath();
-		ctx.moveTo(lastX, lastY);
-		ctx.lineTo(lastX, lastY);
-		ctx.stroke();
+		ctx.arc(lastX, lastY, ctx.lineWidth / 2, 0, Math.PI * 2);
+		ctx.fill();
 
 		hasSignature = true;
 	}
