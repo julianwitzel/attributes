@@ -14,7 +14,11 @@ function createSignaturePad(wrapper) {
 	const lineThickness = parseInt(canvas.dataset.padThickness) || 3;
 	const lineJoin = canvas.dataset.padLineJoin || 'round';
 	const lineCap = canvas.dataset.padLineCap || 'round';
-	const padScale = canvas.dataset.padScale || 2;
+	const padScale = parseFloat(canvas.dataset.padScale) || 2;
+	const smoothFactor = parseFloat(canvas.dataset.padSmoothFactor) || 0.3;
+	const pressureSensitivity = parseFloat(canvas.dataset.padPressureSensitivity) || 0.5;
+
+	let points = [];
 
 	function resizeCanvas() {
 		const tempCanvas = document.createElement('canvas');
@@ -49,6 +53,7 @@ function createSignaturePad(wrapper) {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		hiddenInput.value = '';
 		hasSignature = false;
+		points = [];
 	}
 
 	function getTargetPosition(event) {
@@ -60,12 +65,27 @@ function createSignaturePad(wrapper) {
 
 	function handlePointerMove(event) {
 		if (!writingMode) return;
+		event.preventDefault();
+
 		const [positionX, positionY] = getTargetPosition(event);
-		ctx.beginPath();
-		ctx.moveTo(lastX, lastY);
-		ctx.lineTo(positionX, positionY);
-		ctx.stroke();
-		[lastX, lastY] = [positionX, positionY];
+		points.push({ x: positionX, y: positionY });
+
+		const pressure = event.pressure !== undefined ? event.pressure : 0.5;
+		ctx.lineWidth = lineThickness * padScale * (1 + pressure * pressureSensitivity);
+
+		if (points.length > 3) {
+			const l = points.length - 1;
+			const xc = (points[l].x + points[l - 1].x) / 2;
+			const yc = (points[l].y + points[l - 1].y) / 2;
+
+			ctx.beginPath();
+			ctx.moveTo(xc, yc);
+			ctx.quadraticCurveTo(points[l - 1].x, points[l - 1].y, points[l].x, points[l].y);
+			ctx.stroke();
+
+			points = points.slice(-3);
+		}
+
 		hasSignature = true;
 	}
 
@@ -81,16 +101,19 @@ function createSignaturePad(wrapper) {
 			hiddenInput.name = 'signaturePad_' + canvas.id;
 			hiddenInput.value = imageURL;
 		}
+		points = [];
 	}
 
 	function handlePointerDown(event) {
 		writingMode = true;
-		[lastX, lastY] = getTargetPosition(event);
+		points = [];
+		const [positionX, positionY] = getTargetPosition(event);
+		points.push({ x: positionX, y: positionY });
 
-		// Draw a dot for single taps/clicks
 		ctx.beginPath();
-		ctx.arc(lastX, lastY, (lineThickness * padScale) / 2, 0, Math.PI * 2);
+		ctx.arc(positionX, positionY, ctx.lineWidth / 4, 0, Math.PI * 2);
 		ctx.fill();
+
 		hasSignature = true;
 	}
 
@@ -110,9 +133,9 @@ function createSignaturePad(wrapper) {
 			event.preventDefault();
 			clearPad();
 		});
-		canvas.addEventListener('pointerdown', handlePointerDown, { passive: true });
+		canvas.addEventListener('pointerdown', handlePointerDown, { passive: false });
 		canvas.addEventListener('pointerup', handlePointerUp, { passive: true });
-		canvas.addEventListener('pointermove', handlePointerMove, { passive: true });
+		canvas.addEventListener('pointermove', handlePointerMove, { passive: false });
 		canvas.addEventListener('pointercancel', handlePointerUp, { passive: true });
 		canvas.addEventListener('pointerleave', handlePointerUp, { passive: true });
 		canvas.addEventListener('touchstart', preventDefault, { passive: false });
