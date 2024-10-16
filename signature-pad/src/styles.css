@@ -1,0 +1,23 @@
+.signature-pad_wrapper {
+	position: relative;
+	aspect-ratio: 2.39/1; /* adjust to your liking */
+	display: flex;
+}
+canvas.signature-pad {
+	display: block;
+	width: 100%;
+	height: auto;
+	touch-action: none;
+
+	/* just styling */
+	border: 1px solid #000;
+	border-radius: 0.5rem;
+}
+.signature-pad_controls {
+	position: absolute;
+	display: flex;
+	top: 0;
+	right: 0;
+	padding: 0.5rem;
+	gap: 0.35rem;
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>VIERLESS attributes | signature-pad Demo</title>
+
+		<style>
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+			}
+			.container {
+				max-width: 31.25rem;
+				margin: 0 auto;
+				padding: 2rem;
+			}
+		</style>
+
+		<!-- embeds -->
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/gh/vierless/attributes@latest/signature-pad/src/styles.css" />
+		<script src="https://cdn.jsdelivr.net/gh/vierless/attributes@latest/signature-pad/src/script.js"></script>
+	</head>
+	<body>
+		<div class="container">
+			<p>Signature</p>
+			<div
+				class="signature-pad_wrapper"
+				data-pad="wrapper">
+				<canvas
+					class="signature-pad"
+					id="mySignature"
+					data-pad-color="#000"
+					data-pad-thickness="3"
+					data-pad-line-join="round"
+					data-pad-line-cap="round"></canvas>
+				<input type="hidden" />
+				<div class="signature-pad_controls">
+					<button
+						type="button"
+						class="signature-pad_button"
+						data-pad="clear">
+						Clear
+					</button>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

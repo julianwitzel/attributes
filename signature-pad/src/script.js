@@ -7,6 +7,12 @@ function createSignaturePad(wrapper) {
 	let writingMode = false;
 	let lastX, lastY;
 
+	// Get customizable attributes from canvas
+	const lineColor = canvas.dataset.padColor || 'black';
+	const lineThickness = parseInt(canvas.dataset.padThickness) || 3;
+	const lineJoin = canvas.dataset.padLineJoin || 'round';
+	const lineCap = canvas.dataset.padLineCap || 'round';
+
 	function resizeCanvas() {
 		const tempCanvas = document.createElement('canvas');
 		const tempCtx = tempCanvas.getContext('2d');
@@ -16,10 +22,11 @@ function createSignaturePad(wrapper) {
 		const rect = canvas.getBoundingClientRect();
 		canvas.width = rect.width;
 		canvas.height = rect.height;
-		ctx.lineWidth = 3;
-		ctx.lineJoin = ctx.lineCap = 'round';
+		ctx.lineWidth = lineThickness;
+		ctx.lineJoin = lineJoin;
+		ctx.lineCap = lineCap;
+		ctx.strokeStyle = lineColor;
 		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
-		ctx.strokeStyle = 'white';
 	}
 
 	function clearPad() {
