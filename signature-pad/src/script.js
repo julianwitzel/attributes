@@ -15,11 +15,11 @@ function createSignaturePad(wrapper) {
 	const lineJoin = canvas.dataset.padLineJoin || 'round';
 	const lineCap = canvas.dataset.padLineCap || 'round';
 	const padScale = parseFloat(canvas.dataset.padScale) || 2;
-	const smoothFactor = parseFloat(canvas.dataset.padSmoothFactor) || 0.3;
-	const pressureSensitivity = parseFloat(canvas.dataset.padPressureSensitivity) || 0.5;
 	const minThickness = parseFloat(canvas.dataset.padMinThickness) || lineThickness / 2;
 	const maxThickness = parseFloat(canvas.dataset.padMaxThickness) || lineThickness * 2;
+	const speedSensitivity = parseFloat(canvas.dataset.padSpeedSensitivity) || 1;
 	let lastTimestamp = 0;
+	let lastThickness = maxThickness;
 
 	let points = [];
 
@@ -57,6 +57,7 @@ function createSignaturePad(wrapper) {
 		hiddenInput.value = '';
 		hasSignature = false;
 		points = [];
+		lastThickness = maxThickness;
 	}
 
 	function getTargetPosition(event) {
@@ -81,12 +82,18 @@ function createSignaturePad(wrapper) {
 		const minSpeed = 0.5;
 		const maxSpeed = 10;
 
-		// Inverse relationship: faster speed = thinner line
-		let thickness = maxThickness - ((speed - minSpeed) / (maxSpeed - minSpeed)) * (maxThickness - minThickness);
-		thickness = Math.min(Math.max(thickness, minThickness), maxThickness);
+		const normalizedSpeed = Math.min(Math.max((speed - minSpeed) / (maxSpeed - minSpeed), 0), 1);
+		const thicknessRange = maxThickness - minThickness;
+		const thicknessReduction = Math.pow(normalizedSpeed, speedSensitivity) * thicknessRange;
+		const targetThickness = maxThickness - thicknessReduction;
 
+		// Interpolate between last thickness and target thickness
+		const smoothFactor = 0.3; // Adjust this value to control smoothing (0-1)
+		const newThickness = lastThickness + (targetThickness - lastThickness) * smoothFactor;
+
+		lastThickness = newThickness;
 		lastTimestamp = timestamp;
-		return thickness;
+		return newThickness;
 	}
 
 	function handlePointerMove(event) {
@@ -141,6 +148,7 @@ function createSignaturePad(wrapper) {
 		points = [];
 		[lastX, lastY] = getTargetPosition(event);
 		lastTimestamp = event.timeStamp;
+		lastThickness = maxThickness;
 
 		// Draw a dot for single taps/clicks
 		ctx.beginPath();
