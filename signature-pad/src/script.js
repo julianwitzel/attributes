@@ -1,4 +1,3 @@
-// Function to create a signature pad instance
 function createSignaturePad(wrapper) {
 	const canvas = wrapper.querySelector('canvas');
 	let hiddenInput = wrapper.querySelector('input[type="hidden"]');
@@ -8,10 +7,11 @@ function createSignaturePad(wrapper) {
 	let lastX, lastY;
 	let hasSignature = false;
 	let initialWidth, initialHeight;
-	const recentThicknesses = [];
-	const maxRecentThicknesses = 10;
+	let lastTimestamp = 0;
+	let lastThickness;
+	let points = [];
 
-	// Get customizable attributes from canvas
+	// settings
 	const lineColor = canvas.dataset.padColor || 'black';
 	const lineThickness = parseInt(canvas.dataset.padThickness) || 3;
 	const lineJoin = canvas.dataset.padLineJoin || 'round';
@@ -21,10 +21,10 @@ function createSignaturePad(wrapper) {
 	const maxThickness = parseFloat(canvas.dataset.padMaxThickness) || lineThickness * 2;
 	const minSpeed = parseFloat(canvas.dataset.padMinSpeed) || 0.5;
 	const maxSpeed = parseFloat(canvas.dataset.padMaxSpeed) || 10;
-	let lastTimestamp = 0;
-	let lastThickness = maxThickness;
+	const smoothness = parseInt(canvas.dataset.padSmoothness) || 10;
 
-	let points = [];
+	const recentThicknesses = [];
+	const maxRecentThicknesses = smoothness;
 
 	function resizeCanvas() {
 		const tempCanvas = document.createElement('canvas');
@@ -36,13 +36,11 @@ function createSignaturePad(wrapper) {
 		const rect = canvas.getBoundingClientRect();
 
 		if (!initialWidth || !initialHeight) {
-			// First-time setup: apply padScale
 			canvas.width = rect.width * padScale;
 			canvas.height = rect.height * padScale;
-			initialWidth = rect.width; // Store the unscaled width
-			initialHeight = rect.height; // Store the unscaled height
+			initialWidth = rect.width;
+			initialHeight = rect.height;
 		} else {
-			// Subsequent resizes: use initial dimensions without re-applying padScale
 			canvas.width = initialWidth * padScale;
 			canvas.height = initialHeight * padScale;
 		}
@@ -91,7 +89,6 @@ function createSignaturePad(wrapper) {
 			recentThicknesses.shift();
 		}
 
-		// Calculate the average of recent thicknesses
 		const averageThickness = recentThicknesses.reduce((sum, thickness) => sum + thickness, 0) / recentThicknesses.length;
 
 		lastThickness = averageThickness;
@@ -154,7 +151,6 @@ function createSignaturePad(wrapper) {
 		lastTimestamp = event.timeStamp;
 		lastThickness = maxThickness;
 
-		// Draw a dot for single taps/clicks
 		ctx.beginPath();
 		ctx.arc(lastX, lastY, maxThickness / 2, 0, Math.PI * 2);
 		ctx.fill();
@@ -201,7 +197,6 @@ function createSignaturePad(wrapper) {
 	return initializePad;
 }
 
-// Throttle function
 function throttle(func, limit) {
 	let inThrottle;
 	return function () {
@@ -226,7 +221,6 @@ if (document.readyState === 'loading') {
 	window.addEventListener('load', initializeAllSignaturePads);
 }
 
-// Initialize a specific signature pad
 function initializeSignaturePad(wrapperId) {
 	const wrapper = document.getElementById(wrapperId);
 	if (wrapper && wrapper.initializeSignaturePad) {
