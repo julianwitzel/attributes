@@ -14,7 +14,7 @@ function createSignaturePad(wrapper) {
 	const lineThickness = parseInt(canvas.dataset.padThickness) || 3;
 	const lineJoin = canvas.dataset.padLineJoin || 'round';
 	const lineCap = canvas.dataset.padLineCap || 'round';
-	const padScale = canvas.dataset.padScale || 2;
+	const padScale = parseInt(canvas.dataset.padScale) || 2;
 
 	function resizeCanvas() {
 		const tempCanvas = document.createElement('canvas');
@@ -23,25 +23,36 @@ function createSignaturePad(wrapper) {
 		tempCanvas.height = canvas.height;
 		tempCtx.drawImage(canvas, 0, 0);
 
-		const rect = canvas.getBoundingClientRect();
-		// Use initial dimensions if available, otherwise use current rect
-		canvas.width = initialWidth * padScale || rect.width * padScale;
-		canvas.height = initialHeight * padScale || rect.height * padScale;
+		const rect = wrapper.getBoundingClientRect();
+		if (!initialWidth || !initialHeight) {
+			// First time setup
+			initialWidth = rect.width;
+			initialHeight = rect.height;
+			canvas.width = initialWidth * padScale;
+			canvas.height = initialHeight * padScale;
+		} else {
+			// Subsequent resizes
+			canvas.width = rect.width * padScale;
+			canvas.height = rect.height * padScale;
+		}
 
-		ctx.lineWidth = lineThickness * padScale;
+		// Set display size
+		canvas.style.width = rect.width + 'px';
+		canvas.style.height = rect.height + 'px';
+
+		ctx.scale(padScale, padScale);
+		ctx.lineWidth = lineThickness;
 		ctx.lineJoin = lineJoin;
 		ctx.lineCap = lineCap;
 		ctx.strokeStyle = lineColor;
 		ctx.fillStyle = lineColor;
-		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
 
-		// Store initial dimensions if not set
-		if (!initialWidth) initialWidth = canvas.width;
-		if (!initialHeight) initialHeight = canvas.height;
+		// Redraw existing content
+		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width / padScale, canvas.height / padScale);
 	}
 
 	function clearPad() {
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		ctx.clearRect(0, 0, canvas.width / padScale, canvas.height / padScale);
 		hiddenInput.value = '';
 		hasSignature = false;
 	}
@@ -50,7 +61,7 @@ function createSignaturePad(wrapper) {
 		const rect = canvas.getBoundingClientRect();
 		const scaleX = canvas.width / rect.width;
 		const scaleY = canvas.height / rect.height;
-		return [(event.clientX - rect.left) * scaleX, (event.clientY - rect.top) * scaleY];
+		return [((event.clientX - rect.left) * scaleX) / padScale, ((event.clientY - rect.top) * scaleY) / padScale];
 	}
 
 	function handlePointerMove(event) {
@@ -84,7 +95,7 @@ function createSignaturePad(wrapper) {
 
 		// Draw a dot for single taps/clicks
 		ctx.beginPath();
-		ctx.arc(lastX, lastY, (lineThickness * padScale) / 2, 0, Math.PI * 2);
+		ctx.arc(lastX, lastY, lineThickness / 2, 0, Math.PI * 2);
 		ctx.fill();
 		hasSignature = true;
 	}
