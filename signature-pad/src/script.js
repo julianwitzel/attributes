@@ -18,6 +18,9 @@ function createSignaturePad(wrapper) {
 	const minThickness = parseFloat(canvas.dataset.padMinThickness) || lineThickness / 2;
 	const maxThickness = parseFloat(canvas.dataset.padMaxThickness) || lineThickness * 2;
 	const speedSensitivity = parseFloat(canvas.dataset.padSpeedSensitivity) || 1;
+	const smoothFactor = parseFloat(canvas.dataset.padSmoothFactor) || 0.3;
+	const minSpeed = parseFloat(canvas.dataset.padMinSpeed) || 0.5;
+	const maxSpeed = parseFloat(canvas.dataset.padMaxSpeed) || 10;
 	let lastTimestamp = 0;
 	let lastThickness = maxThickness;
 
@@ -78,17 +81,10 @@ function createSignaturePad(wrapper) {
 		const dt = timestamp - lastTimestamp;
 		const speed = Math.sqrt(dx * dx + dy * dy) / dt;
 
-		// Adjust these values to fine-tune the thickness variation
-		const minSpeed = 0.5;
-		const maxSpeed = 10;
-
 		const normalizedSpeed = Math.min(Math.max((speed - minSpeed) / (maxSpeed - minSpeed), 0), 1);
 		const thicknessRange = maxThickness - minThickness;
 		const thicknessReduction = Math.pow(normalizedSpeed, speedSensitivity) * thicknessRange;
 		const targetThickness = maxThickness - thicknessReduction;
-
-		// Interpolate between last thickness and target thickness
-		const smoothFactor = 0.3; // Adjust this value to control smoothing (0-1)
 		const newThickness = lastThickness + (targetThickness - lastThickness) * smoothFactor;
 
 		lastThickness = newThickness;
