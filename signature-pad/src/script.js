@@ -14,6 +14,7 @@ function createSignaturePad(wrapper) {
 	const lineThickness = parseInt(canvas.dataset.padThickness) || 3;
 	const lineJoin = canvas.dataset.padLineJoin || 'round';
 	const lineCap = canvas.dataset.padLineCap || 'round';
+	const padScale = 2;
 
 	function resizeCanvas() {
 		const tempCanvas = document.createElement('canvas');
@@ -24,8 +25,8 @@ function createSignaturePad(wrapper) {
 
 		const rect = canvas.getBoundingClientRect();
 		// Use initial dimensions if available, otherwise use current rect
-		canvas.width = initialWidth || rect.width;
-		canvas.height = initialHeight || rect.height;
+		canvas.width = initialWidth * padScale || rect.width * padScale;
+		canvas.height = initialHeight * padScale || rect.height * padScale;
 
 		ctx.lineWidth = lineThickness;
 		ctx.lineJoin = lineJoin;
