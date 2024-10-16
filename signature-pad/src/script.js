@@ -8,8 +8,8 @@ function createSignaturePad(wrapper) {
 	let lastX, lastY;
 	let hasSignature = false;
 	let initialWidth, initialHeight;
-	let prevThicknesses = [];
-	const interpolationPoints = 4;
+	const recentThicknesses = [];
+	const maxRecentThicknesses = 10;
 
 	// Get customizable attributes from canvas
 	const lineColor = canvas.dataset.padColor || 'black';
@@ -19,8 +19,6 @@ function createSignaturePad(wrapper) {
 	const padScale = parseFloat(canvas.dataset.padScale) || 2;
 	const minThickness = parseFloat(canvas.dataset.padMinThickness) || lineThickness / 2;
 	const maxThickness = parseFloat(canvas.dataset.padMaxThickness) || lineThickness * 2;
-	const speedSensitivity = parseFloat(canvas.dataset.padSpeedSensitivity) || 1;
-	const smoothFactor = parseFloat(canvas.dataset.padSmoothFactor) || 0.3;
 	const minSpeed = parseFloat(canvas.dataset.padMinSpeed) || 0.5;
 	const maxSpeed = parseFloat(canvas.dataset.padMaxSpeed) || 10;
 	let lastTimestamp = 0;
@@ -63,7 +61,7 @@ function createSignaturePad(wrapper) {
 		hasSignature = false;
 		points = [];
 		lastThickness = maxThickness;
-		prevThicknesses = [];
+		recentThicknesses.length = 0;
 	}
 
 	function getTargetPosition(event) {
@@ -73,16 +71,9 @@ function createSignaturePad(wrapper) {
 		return [(event.clientX - rect.left) * scaleX, (event.clientY - rect.top) * scaleY];
 	}
 
-	function catmullRomInterpolation(p0, p1, p2, p3, t) {
-		const t2 = t * t;
-		const t3 = t2 * t;
-		return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
-	}
-
 	function getLineThickness(x, y, timestamp) {
 		if (lastTimestamp === 0) {
 			lastTimestamp = timestamp;
-			prevThicknesses.push(maxThickness);
 			return maxThickness;
 		}
 
@@ -93,25 +84,19 @@ function createSignaturePad(wrapper) {
 
 		const normalizedSpeed = Math.min(Math.max((speed - minSpeed) / (maxSpeed - minSpeed), 0), 1);
 		const thicknessRange = maxThickness - minThickness;
-		const thicknessReduction = Math.pow(normalizedSpeed, speedSensitivity) * thicknessRange;
-		const targetThickness = maxThickness - thicknessReduction;
+		const targetThickness = maxThickness - normalizedSpeed * thicknessRange;
 
-		prevThicknesses.push(targetThickness);
-		if (prevThicknesses.length > interpolationPoints) {
-			prevThicknesses.shift();
+		recentThicknesses.push(targetThickness);
+		if (recentThicknesses.length > maxRecentThicknesses) {
+			recentThicknesses.shift();
 		}
 
-		let interpolatedThickness;
-		if (prevThicknesses.length === interpolationPoints) {
-			interpolatedThickness = catmullRomInterpolation(prevThicknesses[0], prevThicknesses[1], prevThicknesses[2], prevThicknesses[3], smoothFactor);
-		} else {
-			// Not enough points for Catmull-Rom, use linear interpolation
-			interpolatedThickness = lastThickness + (targetThickness - lastThickness) * smoothFactor;
-		}
+		// Calculate the average of recent thicknesses
+		const averageThickness = recentThicknesses.reduce((sum, thickness) => sum + thickness, 0) / recentThicknesses.length;
 
-		lastThickness = interpolatedThickness;
+		lastThickness = averageThickness;
 		lastTimestamp = timestamp;
-		return interpolatedThickness;
+		return averageThickness;
 	}
 
 	function handlePointerMove(event) {
@@ -164,7 +149,7 @@ function createSignaturePad(wrapper) {
 	function handlePointerDown(event) {
 		writingMode = true;
 		points = [];
-		prevThicknesses = [];
+		recentThicknesses.length = 0;
 		[lastX, lastY] = getTargetPosition(event);
 		lastTimestamp = event.timeStamp;
 		lastThickness = maxThickness;
