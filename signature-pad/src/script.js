@@ -6,6 +6,7 @@ function createSignaturePad(wrapper) {
 	const ctx = canvas.getContext('2d');
 	let writingMode = false;
 	let lastX, lastY;
+	let hasSignature = false; // New variable to track if actual drawing has occurred
 
 	// Get customizable attributes from canvas
 	const lineColor = canvas.dataset.padColor || 'black';
@@ -26,12 +27,14 @@ function createSignaturePad(wrapper) {
 		ctx.lineJoin = lineJoin;
 		ctx.lineCap = lineCap;
 		ctx.strokeStyle = lineColor;
+		ctx.fillStyle = lineColor; // Added for drawing dots
 		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
 	}
 
 	function clearPad() {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		hiddenInput.value = '';
+		hasSignature = false; // Reset hasSignature when clearing
 	}
 
 	function getTargetPosition(event) {
@@ -49,23 +52,33 @@ function createSignaturePad(wrapper) {
 		ctx.lineTo(positionX, positionY);
 		ctx.stroke();
 		[lastX, lastY] = [positionX, positionY];
+		hasSignature = true; // Set hasSignature to true when drawing
 	}
 
 	function handlePointerUp() {
 		writingMode = false;
-		const imageURL = canvas.toDataURL();
-		if (!hiddenInput) {
-			hiddenInput = document.createElement('input');
-			hiddenInput.type = 'hidden';
-			wrapper.appendChild(hiddenInput);
+		if (hasSignature) {
+			// Only update hidden input if there's a signature
+			const imageURL = canvas.toDataURL();
+			if (!hiddenInput) {
+				hiddenInput = document.createElement('input');
+				hiddenInput.type = 'hidden';
+				wrapper.appendChild(hiddenInput);
+			}
+			hiddenInput.name = 'signaturePad_' + canvas.id;
+			hiddenInput.value = imageURL;
 		}
-		hiddenInput.name = 'signaturePad_' + canvas.id;
-		hiddenInput.value = imageURL;
 	}
 
 	function handlePointerDown(event) {
 		writingMode = true;
 		[lastX, lastY] = getTargetPosition(event);
+
+		// Draw a dot for single taps/clicks
+		ctx.beginPath();
+		ctx.arc(lastX, lastY, lineThickness / 2, 0, Math.PI * 2);
+		ctx.fill();
+		hasSignature = true; // Set hasSignature to true when drawing a dot
 	}
 
 	function preventDefault(event) {
