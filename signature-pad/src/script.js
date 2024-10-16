@@ -70,20 +70,16 @@ function createSignaturePad(wrapper) {
 		const [positionX, positionY] = getTargetPosition(event);
 		points.push({ x: positionX, y: positionY });
 
-		const pressure = event.pressure !== undefined ? event.pressure : 0.5;
-		ctx.lineWidth = lineThickness * padScale * (1 + pressure * pressureSensitivity);
-
-		if (points.length > 3) {
-			const l = points.length - 1;
-			const xc = (points[l].x + points[l - 1].x) / 2;
-			const yc = (points[l].y + points[l - 1].y) / 2;
+		if (points.length > 2) {
+			const xc = (points[points.length - 1].x + points[points.length - 2].x) / 2;
+			const yc = (points[points.length - 1].y + points[points.length - 2].y) / 2;
 
 			ctx.beginPath();
-			ctx.moveTo(xc, yc);
-			ctx.quadraticCurveTo(points[l - 1].x, points[l - 1].y, points[l].x, points[l].y);
+			ctx.moveTo(lastX, lastY);
+			ctx.quadraticCurveTo(points[points.length - 2].x, points[points.length - 2].y, xc, yc);
 			ctx.stroke();
 
-			points = points.slice(-3);
+			[lastX, lastY] = [xc, yc];
 		}
 
 		hasSignature = true;
@@ -107,12 +103,13 @@ function createSignaturePad(wrapper) {
 	function handlePointerDown(event) {
 		writingMode = true;
 		points = [];
-		const [positionX, positionY] = getTargetPosition(event);
-		points.push({ x: positionX, y: positionY });
+		[lastX, lastY] = getTargetPosition(event);
+		points.push({ x: lastX, y: lastY });
 
 		ctx.beginPath();
-		ctx.arc(positionX, positionY, ctx.lineWidth / 4, 0, Math.PI * 2);
-		ctx.fill();
+		ctx.moveTo(lastX, lastY);
+		ctx.lineTo(lastX, lastY);
+		ctx.stroke();
 
 		hasSignature = true;
 	}
