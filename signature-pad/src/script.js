@@ -84,7 +84,7 @@ function createSignaturePad(wrapper) {
 
 		// Draw a dot for single taps/clicks
 		ctx.beginPath();
-		ctx.arc(lastX, lastY, lineThickness / 2, 0, Math.PI * 2);
+		ctx.arc(lastX, lastY, (lineThickness * padScale) / 2, 0, Math.PI * 2);
 		ctx.fill();
 		hasSignature = true;
 	}
