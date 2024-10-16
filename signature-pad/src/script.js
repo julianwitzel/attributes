@@ -72,24 +72,45 @@ function createSignaturePad(wrapper) {
 		event.preventDefault();
 	}
 
-	// Initial setup
-	resizeCanvas();
+	function initializePad() {
+		if (isElementVisible(wrapper)) {
+			resizeCanvas();
+			attachEventListeners();
+		}
+	}
 
-	// Event listeners
-	window.addEventListener('resize', throttle(resizeCanvas, 250));
-	clearButton.addEventListener('click', (event) => {
-		event.preventDefault();
-		clearPad();
-	});
-	canvas.addEventListener('pointerdown', handlePointerDown, { passive: true });
-	canvas.addEventListener('pointerup', handlePointerUp, { passive: true });
-	canvas.addEventListener('pointermove', handlePointerMove, { passive: true });
-	canvas.addEventListener('pointercancel', handlePointerUp, { passive: true });
-	canvas.addEventListener('pointerleave', handlePointerUp, { passive: true });
-	canvas.addEventListener('touchstart', preventDefault, { passive: false });
-	canvas.addEventListener('touchmove', preventDefault, { passive: false });
-	canvas.addEventListener('touchend', preventDefault, { passive: false });
-	canvas.addEventListener('touchcancel', preventDefault, { passive: false });
+	function attachEventListeners() {
+		clearButton.addEventListener('click', (event) => {
+			event.preventDefault();
+			clearPad();
+		});
+		canvas.addEventListener('pointerdown', handlePointerDown, { passive: true });
+		canvas.addEventListener('pointerup', handlePointerUp, { passive: true });
+		canvas.addEventListener('pointermove', handlePointerMove, { passive: true });
+		canvas.addEventListener('pointercancel', handlePointerUp, { passive: true });
+		canvas.addEventListener('pointerleave', handlePointerUp, { passive: true });
+		canvas.addEventListener('touchstart', preventDefault, { passive: false });
+		canvas.addEventListener('touchmove', preventDefault, { passive: false });
+		canvas.addEventListener('touchend', preventDefault, { passive: false });
+		canvas.addEventListener('touchcancel', preventDefault, { passive: false });
+	}
+
+	// Check if an element is visible
+	function isElementVisible(element) {
+		return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+	}
+
+	// Initial setup
+	initializePad();
+
+	// Expose initializePad function
+	wrapper.initializeSignaturePad = initializePad;
+
+	// Event listener for window resize
+	window.addEventListener('resize', throttle(initializePad, 250));
+
+	// Return the initialize function for external use
+	return initializePad;
 }
 
 // Throttle function (unchanged)
@@ -111,3 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
 	const signaturePads = document.querySelectorAll('[data-pad="wrapper"]');
 	signaturePads.forEach(createSignaturePad);
 });
+
+// Function to initialize a specific signature pad
+function initializeSignaturePad(wrapperId) {
+	const wrapper = document.getElementById(wrapperId);
+	if (wrapper && wrapper.initializeSignaturePad) {
+		wrapper.initializeSignaturePad();
+	}
+}
