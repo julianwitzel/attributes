@@ -7,7 +7,8 @@ function createSignaturePad(wrapper) {
 	let writingMode = false;
 	let lastX, lastY;
 	let hasSignature = false;
-	let initialWidth, initialHeight; // Store initial dimensions
+	let initialWidth, initialHeight;
+	const scaleFactor = 2; // Increase this for even higher resolution
 
 	// Get customizable attributes from canvas
 	const lineColor = canvas.dataset.padColor || 'black';
@@ -24,31 +25,42 @@ function createSignaturePad(wrapper) {
 
 		const rect = canvas.getBoundingClientRect();
 		// Use initial dimensions if available, otherwise use current rect
-		canvas.width = initialWidth || rect.width;
-		canvas.height = initialHeight || rect.height;
+		const displayWidth = initialWidth || rect.width;
+		const displayHeight = initialHeight || rect.height;
+
+		// Set the canvas size to scaleFactor times the display size
+		canvas.width = displayWidth * scaleFactor;
+		canvas.height = displayHeight * scaleFactor;
+
+		// Set the CSS size to match the display size
+		canvas.style.width = `${displayWidth}px`;
+		canvas.style.height = `${displayHeight}px`;
+
+		ctx.scale(scaleFactor, scaleFactor);
 
 		ctx.lineWidth = lineThickness;
 		ctx.lineJoin = lineJoin;
 		ctx.lineCap = lineCap;
 		ctx.strokeStyle = lineColor;
 		ctx.fillStyle = lineColor;
-		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
+
+		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, displayWidth, displayHeight);
 
 		// Store initial dimensions if not set
-		if (!initialWidth) initialWidth = canvas.width;
-		if (!initialHeight) initialHeight = canvas.height;
+		if (!initialWidth) initialWidth = displayWidth;
+		if (!initialHeight) initialHeight = displayHeight;
 	}
 
 	function clearPad() {
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		ctx.clearRect(0, 0, canvas.width / scaleFactor, canvas.height / scaleFactor);
 		hiddenInput.value = '';
 		hasSignature = false;
 	}
 
 	function getTargetPosition(event) {
 		const rect = canvas.getBoundingClientRect();
-		const scaleX = canvas.width / rect.width;
-		const scaleY = canvas.height / rect.height;
+		const scaleX = canvas.width / rect.width / scaleFactor;
+		const scaleY = canvas.height / rect.height / scaleFactor;
 		return [(event.clientX - rect.left) * scaleX, (event.clientY - rect.top) * scaleY];
 	}
 
