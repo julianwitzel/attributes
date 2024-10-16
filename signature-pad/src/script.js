@@ -1,4 +1,3 @@
-// Function to create a signature pad instance
 function createSignaturePad(wrapper) {
 	const canvas = wrapper.querySelector('canvas');
 	let hiddenInput = wrapper.querySelector('input[type="hidden"]');
@@ -7,9 +6,7 @@ function createSignaturePad(wrapper) {
 	let writingMode = false;
 	let lastX, lastY;
 	let hasSignature = false;
-	let initialWidth, initialHeight;
 	const scaleFactor = 2; // Increase this for even higher resolution
-	let aspectRatio;
 
 	// Get customizable attributes from canvas
 	const lineColor = canvas.dataset.padColor || 'black';
@@ -18,52 +15,33 @@ function createSignaturePad(wrapper) {
 	const lineCap = canvas.dataset.padLineCap || 'round';
 
 	function resizeCanvas() {
-		const tempCanvas = document.createElement('canvas');
-		const tempCtx = tempCanvas.getContext('2d');
-		tempCanvas.width = canvas.width;
-		tempCanvas.height = canvas.height;
-		tempCtx.drawImage(canvas, 0, 0);
-
 		const rect = wrapper.getBoundingClientRect();
-		let newWidth = rect.width;
-		let newHeight;
-
-		if (!aspectRatio) {
-			// Initialize aspect ratio if not set
-			aspectRatio = initialHeight / initialWidth;
-		}
-
-		// Calculate new height based on aspect ratio
-		newHeight = newWidth * aspectRatio;
-
-		// Adjust if new height exceeds wrapper height
-		if (newHeight > rect.height) {
-			newHeight = rect.height;
-			newWidth = newHeight / aspectRatio;
-		}
-
-		// Update initial dimensions
-		initialWidth = newWidth;
-		initialHeight = newHeight;
+		const displayWidth = rect.width;
+		const displayHeight = rect.height;
 
 		// Set the canvas size to scaleFactor times the display size
-		canvas.width = newWidth * scaleFactor;
-		canvas.height = newHeight * scaleFactor;
+		canvas.width = displayWidth * scaleFactor;
+		canvas.height = displayHeight * scaleFactor;
 
 		// Set the CSS size to match the display size
-		canvas.style.width = `${newWidth}px`;
-		canvas.style.height = `${newHeight}px`;
+		canvas.style.width = `${displayWidth}px`;
+		canvas.style.height = `${displayHeight}px`;
 
+		// Scale the context
 		ctx.scale(scaleFactor, scaleFactor);
 
+		// Set drawing styles
 		ctx.lineWidth = lineThickness;
 		ctx.lineJoin = lineJoin;
 		ctx.lineCap = lineCap;
 		ctx.strokeStyle = lineColor;
 		ctx.fillStyle = lineColor;
 
-		// Draw the existing content scaled to the new size
-		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, newWidth, newHeight);
+		// Redraw signature if exists
+		if (hasSignature) {
+			const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+			ctx.putImageData(imageData, 0, 0);
+		}
 	}
 
 	function clearPad() {
@@ -74,9 +52,9 @@ function createSignaturePad(wrapper) {
 
 	function getTargetPosition(event) {
 		const rect = canvas.getBoundingClientRect();
-		const scaleX = canvas.width / rect.width / scaleFactor;
-		const scaleY = canvas.height / rect.height / scaleFactor;
-		return [(event.clientX - rect.left) * scaleX, (event.clientY - rect.top) * scaleY];
+		const scaleX = canvas.width / rect.width;
+		const scaleY = canvas.height / rect.height;
+		return [(event.clientX - rect.left) * (scaleX / scaleFactor), (event.clientY - rect.top) * (scaleY / scaleFactor)];
 	}
 
 	function handlePointerMove(event) {
@@ -121,10 +99,6 @@ function createSignaturePad(wrapper) {
 
 	function initializePad() {
 		if (isElementVisible(wrapper)) {
-			const rect = wrapper.getBoundingClientRect();
-			initialWidth = rect.width;
-			initialHeight = rect.height;
-			aspectRatio = initialHeight / initialWidth;
 			resizeCanvas();
 			attachEventListeners();
 		}
@@ -153,22 +127,21 @@ function createSignaturePad(wrapper) {
 	initializePad();
 	wrapper.initializeSignaturePad = initializePad;
 
-	window.addEventListener('resize', throttle(initializePad, 250));
+	window.addEventListener('resize', debounce(initializePad, 250));
 
 	return initializePad;
 }
 
-// Throttle function
-function throttle(func, limit) {
-	let inThrottle;
-	return function () {
-		const args = arguments;
-		const context = this;
-		if (!inThrottle) {
-			func.apply(context, args);
-			inThrottle = true;
-			setTimeout(() => (inThrottle = false), limit);
-		}
+// Debounce function
+function debounce(func, wait) {
+	let timeout;
+	return function executedFunction(...args) {
+		const later = () => {
+			clearTimeout(timeout);
+			func(...args);
+		};
+		clearTimeout(timeout);
+		timeout = setTimeout(later, wait);
 	};
 }
 
