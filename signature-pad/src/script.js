@@ -127,16 +127,24 @@ function throttle(func, limit) {
 	};
 }
 
-// Initialize all signature pads
-document.addEventListener('DOMContentLoaded', () => {
+function initializeAllSignaturePads() {
 	const signaturePads = document.querySelectorAll('[data-pad="wrapper"]');
 	signaturePads.forEach(createSignaturePad);
-});
+}
 
-// Function to initialize a specific signature pad
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', initializeAllSignaturePads);
+} else {
+	window.addEventListener('load', initializeAllSignaturePads);
+}
+
+// initialize a specific signature pad
 function initializeSignaturePad(wrapperId) {
 	const wrapper = document.getElementById(wrapperId);
 	if (wrapper && wrapper.initializeSignaturePad) {
 		wrapper.initializeSignaturePad();
 	}
 }
+
+window.initializeAllSignaturePads = initializeAllSignaturePads;
+window.initializeSignaturePad = initializeSignaturePad;
