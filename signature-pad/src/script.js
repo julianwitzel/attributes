@@ -205,17 +205,19 @@ function createSignaturePad(wrapper) {
 	}
 
 	function getImageDataURL() {
+		console.log('Save format:', options.saveFormat);
+		console.log('Number of points:', points.length);
 		switch (options.saveFormat.toLowerCase()) {
 			case 'jpg':
 			case 'jpeg':
+				// Create a new canvas
 				const jpgCanvas = document.createElement('canvas');
 				jpgCanvas.width = canvas.width;
 				jpgCanvas.height = canvas.height;
-				const jpgCtx = jpgCanvas.getContext('2d');
 
+				const jpgCtx = jpgCanvas.getContext('2d');
 				jpgCtx.fillStyle = 'white';
 				jpgCtx.fillRect(0, 0, jpgCanvas.width, jpgCanvas.height);
-
 				jpgCtx.drawImage(canvas, 0, 0);
 
 				return jpgCanvas.toDataURL('image/jpeg');
@@ -245,53 +247,23 @@ function createSignaturePad(wrapper) {
 			const thickness = point.thickness / 2;
 
 			if (i === 0) {
-				pathData += `M ${x - thickness} ${y}`;
+				pathData += `M ${x} ${y}`;
 			} else {
-				const angle = Math.atan2(y - prevY, x - prevX);
-
-				const ox1 = prevX - prevThickness * Math.sin(angle);
-				const oy1 = prevY + prevThickness * Math.cos(angle);
-				const ox2 = x - thickness * Math.sin(angle);
-				const oy2 = y + thickness * Math.cos(angle);
-
-				pathData += ` Q ${prevX} ${prevY} ${(ox1 + ox2) / 2} ${(oy1 + oy2) / 2}`;
+				pathData += ` L ${x} ${y}`;
 			}
 
 			prevX = x;
 			prevY = y;
 			prevThickness = thickness;
 		}
-
-		for (let i = points.length - 1; i >= 0; i--) {
-			const point = points[i];
-			const x = point.x;
-			const y = point.y;
-			const thickness = point.thickness / 2;
-
-			if (i === points.length - 1) {
-				pathData += ` L ${x + thickness} ${y}`;
-			} else {
-				const angle = Math.atan2(y - prevY, x - prevX);
-
-				const ox1 = prevX + prevThickness * Math.sin(angle);
-				const oy1 = prevY - prevThickness * Math.cos(angle);
-				const ox2 = x + thickness * Math.sin(angle);
-				const oy2 = y - thickness * Math.cos(angle);
-
-				pathData += ` Q ${prevX} ${prevY} ${(ox1 + ox2) / 2} ${(oy1 + oy2) / 2}`;
-			}
-
-			prevX = x;
-			prevY = y;
-			prevThickness = thickness;
-		}
-
-		pathData += ' Z';
 
 		const path = document.createElementNS(svgNS, 'path');
 		path.setAttribute('d', pathData);
-		path.setAttribute('fill', options.lineColor);
-		path.setAttribute('stroke', 'none');
+		path.setAttribute('fill', 'none');
+		path.setAttribute('stroke', options.lineColor);
+		path.setAttribute('stroke-width', options.lineThickness);
+		path.setAttribute('stroke-linecap', options.lineCap);
+		path.setAttribute('stroke-linejoin', options.lineJoin);
 
 		svg.appendChild(path);
 
