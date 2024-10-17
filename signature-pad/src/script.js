@@ -208,7 +208,17 @@ function createSignaturePad(wrapper) {
 		switch (options.saveFormat.toLowerCase()) {
 			case 'jpg':
 			case 'jpeg':
-				return canvas.toDataURL('image/jpeg');
+				const jpgCanvas = document.createElement('canvas');
+				jpgCanvas.width = canvas.width;
+				jpgCanvas.height = canvas.height;
+				const jpgCtx = jpgCanvas.getContext('2d');
+
+				jpgCtx.fillStyle = 'white';
+				jpgCtx.fillRect(0, 0, jpgCanvas.width, jpgCanvas.height);
+
+				jpgCtx.drawImage(canvas, 0, 0);
+
+				return jpgCanvas.toDataURL('image/jpeg');
 			case 'svg':
 				return canvasToSVG(canvas);
 			case 'png':
