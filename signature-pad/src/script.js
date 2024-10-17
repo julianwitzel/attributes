@@ -164,7 +164,6 @@ function createSignaturePad(wrapper) {
 			x: positionX,
 			y: positionY,
 			lineWidth: thickness,
-			strokeStyle: ctx.strokeStyle,
 		});
 
 		hasSignature = true;
@@ -214,7 +213,6 @@ function createSignaturePad(wrapper) {
 				x: lastX,
 				y: lastY,
 				lineWidth: ctx.lineWidth,
-				strokeStyle: ctx.strokeStyle,
 			});
 		}
 	}
@@ -256,32 +254,40 @@ function createSignaturePad(wrapper) {
 		svg.setAttribute('width', canvas.width);
 		svg.setAttribute('height', canvas.height);
 		svg.setAttribute('xmlns', svgNS);
+		svg.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`);
 
 		if (drawingOperations.length === 0) {
 			return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
 		}
 
-		const path = document.createElementNS(svgNS, 'path');
+		let currentPath = null;
 		let pathData = '';
-		let firstOperation = true;
 
-		drawingOperations.forEach((op) => {
-			if (firstOperation) {
-				pathData += `M${op.x},${op.y}`;
-				firstOperation = false;
+		drawingOperations.forEach((op, index) => {
+			if (op.type === 'moveTo' || index === 0) {
+				// Start a new path
+				if (currentPath) {
+					currentPath.setAttribute('d', pathData);
+					svg.appendChild(currentPath);
+				}
+				currentPath = document.createElementNS(svgNS, 'path');
+				currentPath.setAttribute('fill', 'none');
+				currentPath.setAttribute('stroke', options.lineColor);
+				currentPath.setAttribute('stroke-width', op.lineWidth);
+				currentPath.setAttribute('stroke-linecap', 'round');
+				currentPath.setAttribute('stroke-linejoin', 'round');
+				pathData = `M${op.x},${op.y}`;
 			} else {
+				// Continue the current path
 				pathData += `L${op.x},${op.y}`;
 			}
 		});
 
-		path.setAttribute('d', pathData);
-		path.setAttribute('fill', 'none');
-		path.setAttribute('stroke', options.lineColor);
-		path.setAttribute('stroke-width', options.lineThickness);
-		path.setAttribute('stroke-linecap', 'round');
-		path.setAttribute('stroke-linejoin', 'round');
-
-		svg.appendChild(path);
+		// Add the last path
+		if (currentPath) {
+			currentPath.setAttribute('d', pathData);
+			svg.appendChild(currentPath);
+		}
 
 		return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
 	}
