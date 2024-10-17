@@ -15,7 +15,6 @@ function createSignaturePad(wrapper) {
 
 	let options = {
 		lineColor: canvas.dataset.padColor || 'black',
-		lineThickness: parseInt(canvas.dataset.padThickness) || 3,
 		lineJoin: canvas.dataset.padLineJoin || 'round',
 		lineCap: canvas.dataset.padLineCap || 'round',
 		padScale: parseFloat(canvas.dataset.padScale) || 2,
@@ -75,7 +74,6 @@ function createSignaturePad(wrapper) {
 			canvas.height = initialHeight * options.padScale;
 		}
 
-		ctx.lineWidth = options.lineThickness * options.padScale;
 		ctx.lineJoin = options.lineJoin;
 		ctx.lineCap = options.lineCap;
 		ctx.strokeStyle = options.lineColor;
@@ -88,7 +86,7 @@ function createSignaturePad(wrapper) {
 		hiddenInput.value = '';
 		hasSignature = false;
 		points = [];
-		lastThickness = options.maxThickness;
+		lastThickness = (options.maxThickness + options.minThickness) / 2;
 		recentThicknesses.length = 0;
 		activePointers = 0;
 		initialPointerId = null;
@@ -199,10 +197,10 @@ function createSignaturePad(wrapper) {
 			recentThicknesses.length = 0;
 			[lastX, lastY] = getTargetPosition(event);
 			lastTimestamp = event.timeStamp;
-			lastThickness = options.maxThickness;
+			lastThickness = (options.maxThickness + options.minThickness) / 2;
 
 			ctx.beginPath();
-			ctx.arc(lastX, lastY, options.maxThickness / 2, 0, Math.PI * 2);
+			ctx.arc(lastX, lastY, lastThickness / 2, 0, Math.PI * 2);
 			ctx.fill();
 
 			hasSignature = true;
@@ -212,7 +210,7 @@ function createSignaturePad(wrapper) {
 				type: 'moveTo',
 				x: lastX,
 				y: lastY,
-				lineWidth: ctx.lineWidth,
+				lineWidth: lastThickness,
 			});
 		}
 	}
