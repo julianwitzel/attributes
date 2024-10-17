@@ -238,32 +238,56 @@ function createSignaturePad(wrapper) {
 		if (points.length < 2) return '';
 
 		let pathData = '';
-		let prevX, prevY, prevThickness;
 
-		for (let i = 0; i < points.length; i++) {
-			const point = points[i];
-			const x = point.x;
-			const y = point.y;
-			const thickness = point.thickness / 2;
+		for (let i = 0; i < points.length - 1; i++) {
+			const p1 = points[i];
+			const p2 = points[i + 1];
+
+			const dx = p2.x - p1.x;
+			const dy = p2.y - p1.y;
+			const angle = Math.atan2(dy, dx);
+
+			const thickness1 = p1.thickness / 2;
+			const thickness2 = p2.thickness / 2;
+
+			const x1 = p1.x + thickness1 * Math.sin(angle);
+			const y1 = p1.y - thickness1 * Math.cos(angle);
+			const x2 = p2.x + thickness2 * Math.sin(angle);
+			const y2 = p2.y - thickness2 * Math.cos(angle);
 
 			if (i === 0) {
-				pathData += `M ${x} ${y}`;
-			} else {
-				pathData += ` L ${x} ${y}`;
+				pathData += `M ${x1},${y1} `;
 			}
 
-			prevX = x;
-			prevY = y;
-			prevThickness = thickness;
+			pathData += `L ${x2},${y2} `;
 		}
+
+		// Draw the other side of the stroke
+		for (let i = points.length - 1; i > 0; i--) {
+			const p1 = points[i];
+			const p2 = points[i - 1];
+
+			const dx = p2.x - p1.x;
+			const dy = p2.y - p1.y;
+			const angle = Math.atan2(dy, dx);
+
+			const thickness1 = p1.thickness / 2;
+			const thickness2 = p2.thickness / 2;
+
+			const x1 = p1.x - thickness1 * Math.sin(angle);
+			const y1 = p1.y + thickness1 * Math.cos(angle);
+			const x2 = p2.x - thickness2 * Math.sin(angle);
+			const y2 = p2.y + thickness2 * Math.cos(angle);
+
+			pathData += `L ${x1},${y1} `;
+		}
+
+		pathData += 'Z';
 
 		const path = document.createElementNS(svgNS, 'path');
 		path.setAttribute('d', pathData);
-		path.setAttribute('fill', 'none');
-		path.setAttribute('stroke', options.lineColor);
-		path.setAttribute('stroke-width', options.lineThickness);
-		path.setAttribute('stroke-linecap', options.lineCap);
-		path.setAttribute('stroke-linejoin', options.lineJoin);
+		path.setAttribute('fill', options.lineColor);
+		path.setAttribute('stroke', 'none');
 
 		svg.appendChild(path);
 
