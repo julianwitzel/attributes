@@ -10,10 +10,8 @@ function createSignaturePad(wrapper) {
 	let lastTimestamp = 0;
 	let activePointers = 0;
 	let initialPointerId = null;
-	let lastThickness;
 	let points = [];
 
-	// Options object to store all configurable settings
 	let options = {
 		lineColor: canvas.dataset.padColor || 'black',
 		lineThickness: parseInt(canvas.dataset.padThickness) || 3,
@@ -26,6 +24,7 @@ function createSignaturePad(wrapper) {
 		maxSpeed: parseFloat(canvas.dataset.padMaxSpeed) || 10,
 		smoothness: parseInt(canvas.dataset.padSmoothness) || 10,
 		saveFormat: canvas.dataset.padSaveFormat || 'png',
+		speedSensitivity: parseFloat(canvas.dataset.padSpeedSensitivity) || 1,
 	};
 
 	const recentThicknesses = [];
@@ -33,15 +32,12 @@ function createSignaturePad(wrapper) {
 	function setOptions(newOptions) {
 		Object.assign(options, newOptions);
 
-		// Update canvas attributes
 		Object.keys(options).forEach((key) => {
 			canvas.dataset[`pad${key.charAt(0).toUpperCase() + key.slice(1)}`] = options[key];
 		});
 
-		// Reinitialize the pad with new settings
 		initializePad();
 
-		// If there's an existing signature, redraw it with new settings
 		if (hasSignature) {
 			redrawSignature();
 		}
@@ -115,7 +111,9 @@ function createSignaturePad(wrapper) {
 		const dt = timestamp - lastTimestamp;
 		const speed = Math.sqrt(dx * dx + dy * dy) / dt;
 
-		const normalizedSpeed = Math.min(Math.max((speed - options.minSpeed) / (options.maxSpeed - options.minSpeed), 0), 1);
+		const adjustedSpeed = speed * options.speedSensitivity;
+
+		const normalizedSpeed = Math.min(Math.max((adjustedSpeed - options.minSpeed) / (options.maxSpeed - options.minSpeed), 0), 1);
 		const thicknessRange = options.maxThickness - options.minThickness;
 		const targetThickness = options.maxThickness - normalizedSpeed * thicknessRange;
 
@@ -126,7 +124,6 @@ function createSignaturePad(wrapper) {
 
 		const averageThickness = recentThicknesses.reduce((sum, thickness) => sum + thickness, 0) / recentThicknesses.length;
 
-		lastThickness = averageThickness;
 		lastTimestamp = timestamp;
 		return averageThickness;
 	}
