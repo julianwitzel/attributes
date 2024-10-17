@@ -237,64 +237,40 @@ function createSignaturePad(wrapper) {
 
 		if (points.length < 2) return '';
 
-		const path = document.createElementNS(svgNS, 'path');
-		let pathData = '';
+		const group = document.createElementNS(svgNS, 'g');
 
-		// Helper function to calculate control points
-		function getControlPoints(p0, p1, p2, t) {
-			const d01 = Math.sqrt(Math.pow(p1.x - p0.x, 2) + Math.pow(p1.y - p0.y, 2));
-			const d12 = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-			const fa = (t * d01) / (d01 + d12);
-			const fb = (t * d12) / (d01 + d12);
-			return {
-				x1: p1.x - fa * (p2.x - p0.x),
-				y1: p1.y - fa * (p2.y - p0.y),
-				x2: p1.x + fb * (p2.x - p0.x),
-				y2: p1.y + fb * (p2.y - p0.y),
+		// Function to create a smooth path
+		function createSmoothPath(points, offset) {
+			let pathData = `M ${points[0].x + offset.x},${points[0].y + offset.y} `;
+
+			for (let i = 1; i < points.length - 2; i++) {
+				const xc = (points[i].x + points[i + 1].x) / 2;
+				const yc = (points[i].y + points[i + 1].y) / 2;
+				pathData += `Q ${points[i].x + offset.x},${points[i].y + offset.y} ${xc + offset.x},${yc + offset.y} `;
+			}
+
+			pathData += `Q ${points[points.length - 2].x + offset.x},${points[points.length - 2].y + offset.y} ${points[points.length - 1].x + offset.x},${points[points.length - 1].y + offset.y}`;
+
+			return pathData;
+		}
+
+		// Create multiple overlapping paths
+		for (let i = 0; i < 5; i++) {
+			const path = document.createElementNS(svgNS, 'path');
+			const offset = {
+				x: (Math.random() - 0.5) * 2,
+				y: (Math.random() - 0.5) * 2,
 			};
+			path.setAttribute('d', createSmoothPath(points, offset));
+			path.setAttribute('fill', 'none');
+			path.setAttribute('stroke', options.lineColor);
+			path.setAttribute('stroke-width', options.lineThickness * 0.4);
+			path.setAttribute('stroke-linecap', 'round');
+			path.setAttribute('stroke-linejoin', 'round');
+			group.appendChild(path);
 		}
 
-		// Draw the outline
-		for (let i = 0; i < points.length; i++) {
-			const p = points[i];
-			const halfThickness = p.thickness / 2;
-
-			if (i === 0) {
-				pathData += `M ${p.x - halfThickness},${p.y} `;
-			} else if (i < points.length - 1) {
-				const prev = points[i - 1];
-				const next = points[i + 1];
-				const cp = getControlPoints(prev, p, next, 0.5);
-
-				pathData += `Q ${cp.x1},${cp.y1 - halfThickness} ${p.x},${p.y - halfThickness} `;
-			} else {
-				pathData += `L ${p.x},${p.y - halfThickness} `;
-			}
-		}
-
-		// Complete the outline (bottom edge)
-		for (let i = points.length - 1; i >= 0; i--) {
-			const p = points[i];
-			const halfThickness = p.thickness / 2;
-
-			if (i === points.length - 1) {
-				pathData += `L ${p.x},${p.y + halfThickness} `;
-			} else if (i > 0) {
-				const prev = points[i + 1];
-				const next = points[i - 1];
-				const cp = getControlPoints(prev, p, next, 0.5);
-
-				pathData += `Q ${cp.x1},${cp.y1 + halfThickness} ${p.x},${p.y + halfThickness} `;
-			} else {
-				pathData += `L ${p.x},${p.y + halfThickness} Z`;
-			}
-		}
-
-		path.setAttribute('d', pathData);
-		path.setAttribute('fill', options.lineColor);
-		path.setAttribute('stroke', 'none');
-
-		svg.appendChild(path);
+		svg.appendChild(group);
 
 		return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
 	}
