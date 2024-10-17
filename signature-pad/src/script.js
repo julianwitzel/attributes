@@ -230,80 +230,42 @@ function createSignaturePad(wrapper) {
 
 	function canvasToSVG(canvas) {
 		const ctx = canvas.getContext('2d');
-		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-		const data = imageData.data;
 		const svgNS = 'http://www.w3.org/2000/svg';
 		const svg = document.createElementNS(svgNS, 'svg');
 		svg.setAttribute('width', canvas.width);
 		svg.setAttribute('height', canvas.height);
 		svg.setAttribute('xmlns', svgNS);
 
-		const paths = [];
-		const threshold = 200; // Adjust this value to fine-tune tracing sensitivity
+		const path = document.createElementNS(svgNS, 'path');
+		let d = '';
+		let isFirstPoint = true;
 
-		function getPixel(x, y) {
-			if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return 255;
-			const i = (y * canvas.width + x) * 4;
-			return data[i] < threshold ? 0 : 255;
-		}
-
-		function tracePath(startX, startY) {
-			const path = [];
-			let x = startX,
-				y = startY;
-			const directions = [
-				[1, 0],
-				[1, 1],
-				[0, 1],
-				[-1, 1],
-				[-1, 0],
-				[-1, -1],
-				[0, -1],
-				[1, -1],
-			];
-			let dir = 0;
-
-			do {
-				path.push({ x, y });
-				let found = false;
-				for (let i = 0; i < 8; i++) {
-					const newDir = (dir + i) % 8;
-					const newX = x + directions[newDir][0];
-					const newY = y + directions[newDir][1];
-					if (getPixel(newX, newY) === 0) {
-						dir = newDir;
-						x = newX;
-						y = newY;
-						found = true;
-						break;
-					}
-				}
-				if (!found) break;
-			} while (!(x === startX && y === startY) && path.length < 10000);
-
-			return path;
-		}
+		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+		const data = imageData.data;
+		const threshold = 200;
 
 		for (let y = 0; y < canvas.height; y++) {
 			for (let x = 0; x < canvas.width; x++) {
-				if (getPixel(x, y) === 0 && getPixel(x - 1, y) === 255) {
-					paths.push(tracePath(x, y));
+				const index = (y * canvas.width + x) * 4;
+				if (data[index] < threshold) {
+					if (isFirstPoint) {
+						d += `M${x},${y}`;
+						isFirstPoint = false;
+					} else {
+						d += `L${x},${y}`;
+					}
 				}
 			}
 		}
 
-		paths.forEach((path) => {
-			const svgPath = document.createElementNS(svgNS, 'path');
-			let d = `M${path[0].x},${path[0].y}`;
-			for (let i = 1; i < path.length; i++) {
-				d += `L${path[i].x},${path[i].y}`;
-			}
-			d += 'Z';
-			svgPath.setAttribute('d', d);
-			svgPath.setAttribute('fill', options.lineColor);
-			svgPath.setAttribute('stroke', 'none');
-			svg.appendChild(svgPath);
-		});
+		path.setAttribute('d', d);
+		path.setAttribute('fill', 'none');
+		path.setAttribute('stroke', options.lineColor);
+		path.setAttribute('stroke-width', '1');
+		path.setAttribute('stroke-linecap', 'round');
+		path.setAttribute('stroke-linejoin', 'round');
+
+		svg.appendChild(path);
 
 		return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
 	}
