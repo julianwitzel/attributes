@@ -251,55 +251,39 @@ function createSignaturePad(wrapper) {
 	}
 
 	function canvasToSVG(canvas) {
-		try {
-			console.log('Entering canvasToSVG function');
-			const svgNS = 'http://www.w3.org/2000/svg';
-			const svg = document.createElementNS(svgNS, 'svg');
-			svg.setAttribute('width', canvas.width);
-			svg.setAttribute('height', canvas.height);
-			svg.setAttribute('xmlns', svgNS);
+		const svgNS = 'http://www.w3.org/2000/svg';
+		const svg = document.createElementNS(svgNS, 'svg');
+		svg.setAttribute('width', canvas.width);
+		svg.setAttribute('height', canvas.height);
+		svg.setAttribute('xmlns', svgNS);
 
-			if (drawingOperations.length === 0) {
-				console.log('No drawing operations found');
-				return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
-			}
-
-			let currentPath = null;
-			let pathData = '';
-
-			drawingOperations.forEach((op, index) => {
-				console.log(`Processing operation ${index}:`, op);
-				if (op.type === 'moveTo' || (index > 0 && op.lineWidth !== drawingOperations[index - 1].lineWidth)) {
-					if (currentPath) {
-						currentPath.setAttribute('d', pathData);
-						svg.appendChild(currentPath);
-					}
-
-					currentPath = document.createElementNS(svgNS, 'path');
-					currentPath.setAttribute('fill', 'none');
-					currentPath.setAttribute('stroke', op.strokeStyle);
-					currentPath.setAttribute('stroke-width', op.lineWidth);
-					currentPath.setAttribute('stroke-linecap', 'round');
-					currentPath.setAttribute('stroke-linejoin', 'round');
-
-					pathData = `M${op.x},${op.y}`;
-				} else if (op.type === 'lineTo') {
-					pathData += `L${op.x},${op.y}`;
-				}
-			});
-
-			if (currentPath) {
-				currentPath.setAttribute('d', pathData);
-				svg.appendChild(currentPath);
-			}
-
-			const svgString = new XMLSerializer().serializeToString(svg);
-			console.log('Generated SVG string:', svgString);
-			return 'data:image/svg+xml;base64,' + btoa(svgString);
-		} catch (error) {
-			console.error('Error generating SVG:', error);
-			return '';
+		if (drawingOperations.length === 0) {
+			return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
 		}
+
+		const path = document.createElementNS(svgNS, 'path');
+		let pathData = '';
+		let firstOperation = true;
+
+		drawingOperations.forEach((op) => {
+			if (firstOperation) {
+				pathData += `M${op.x},${op.y}`;
+				firstOperation = false;
+			} else {
+				pathData += `L${op.x},${op.y}`;
+			}
+		});
+
+		path.setAttribute('d', pathData);
+		path.setAttribute('fill', 'none');
+		path.setAttribute('stroke', options.lineColor);
+		path.setAttribute('stroke-width', options.lineThickness);
+		path.setAttribute('stroke-linecap', 'round');
+		path.setAttribute('stroke-linejoin', 'round');
+
+		svg.appendChild(path);
+
+		return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
 	}
 
 	function initializePad() {
