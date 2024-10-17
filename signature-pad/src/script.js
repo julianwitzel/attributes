@@ -237,54 +237,59 @@ function createSignaturePad(wrapper) {
 
 		if (points.length < 2) return '';
 
+		const path = document.createElementNS(svgNS, 'path');
 		let pathData = '';
-		let lastX, lastY, lastThickness;
 
+		// Helper function to calculate control points
+		function getControlPoints(p0, p1, p2, t) {
+			const d01 = Math.sqrt(Math.pow(p1.x - p0.x, 2) + Math.pow(p1.y - p0.y, 2));
+			const d12 = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+			const fa = (t * d01) / (d01 + d12);
+			const fb = (t * d12) / (d01 + d12);
+			return {
+				x1: p1.x - fa * (p2.x - p0.x),
+				y1: p1.y - fa * (p2.y - p0.y),
+				x2: p1.x + fb * (p2.x - p0.x),
+				y2: p1.y + fb * (p2.y - p0.y),
+			};
+		}
+
+		// Draw the outline
 		for (let i = 0; i < points.length; i++) {
 			const p = points[i];
 			const halfThickness = p.thickness / 2;
 
 			if (i === 0) {
 				pathData += `M ${p.x - halfThickness},${p.y} `;
+			} else if (i < points.length - 1) {
+				const prev = points[i - 1];
+				const next = points[i + 1];
+				const cp = getControlPoints(prev, p, next, 0.5);
+
+				pathData += `Q ${cp.x1},${cp.y1 - halfThickness} ${p.x},${p.y - halfThickness} `;
 			} else {
-				const cp1x = lastX;
-				const cp1y = lastY;
-				const cp2x = p.x;
-				const cp2y = p.y;
-
-				// Top edge of the stroke
-				pathData += `C ${cp1x},${lastY - lastThickness / 2} ${cp2x},${p.y - halfThickness} ${p.x},${p.y - halfThickness} `;
+				pathData += `L ${p.x},${p.y - halfThickness} `;
 			}
-
-			lastX = p.x;
-			lastY = p.y;
-			lastThickness = p.thickness;
 		}
 
-		// Bottom edge of the stroke (in reverse)
+		// Complete the outline (bottom edge)
 		for (let i = points.length - 1; i >= 0; i--) {
 			const p = points[i];
 			const halfThickness = p.thickness / 2;
 
 			if (i === points.length - 1) {
 				pathData += `L ${p.x},${p.y + halfThickness} `;
+			} else if (i > 0) {
+				const prev = points[i + 1];
+				const next = points[i - 1];
+				const cp = getControlPoints(prev, p, next, 0.5);
+
+				pathData += `Q ${cp.x1},${cp.y1 + halfThickness} ${p.x},${p.y + halfThickness} `;
 			} else {
-				const cp1x = lastX;
-				const cp1y = lastY;
-				const cp2x = p.x;
-				const cp2y = p.y;
-
-				pathData += `C ${cp1x},${lastY + lastThickness / 2} ${cp2x},${p.y + halfThickness} ${p.x},${p.y + halfThickness} `;
+				pathData += `L ${p.x},${p.y + halfThickness} Z`;
 			}
-
-			lastX = p.x;
-			lastY = p.y;
-			lastThickness = p.thickness;
 		}
 
-		pathData += 'Z'; // Close the path
-
-		const path = document.createElementNS(svgNS, 'path');
 		path.setAttribute('d', pathData);
 		path.setAttribute('fill', options.lineColor);
 		path.setAttribute('stroke', 'none');
