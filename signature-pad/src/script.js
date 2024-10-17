@@ -228,49 +228,87 @@ function createSignaturePad(wrapper) {
 		}
 	}
 
-	function canvasToSVG(canvas, points) {
+	function canvasToSVG(canvas) {
+		const ctx = canvas.getContext('2d');
+		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+		const data = imageData.data;
+		const threshold = 200; // Adjust this value to fine-tune the tracing sensitivity
+
+		function getPixel(x, y) {
+			if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) {
+				return 255;
+			}
+			const i = (y * canvas.width + x) * 4;
+			return data[i] < threshold ? 0 : 255;
+		}
+
+		function walkPerimeter(startX, startY) {
+			const path = [];
+			let x = startX;
+			let y = startY;
+			const dirs = [
+				[-1, 0],
+				[-1, 1],
+				[0, 1],
+				[1, 1],
+				[1, 0],
+				[1, -1],
+				[0, -1],
+				[-1, -1],
+			];
+			let dir = 0;
+
+			do {
+				path.push({ x, y });
+				let newX, newY, newDir;
+
+				for (let i = 0; i < 8; i++) {
+					newDir = (dir + i) % 8;
+					newX = x + dirs[newDir][0];
+					newY = y + dirs[newDir][1];
+
+					if (getPixel(newX, newY) === 0) {
+						dir = newDir;
+						x = newX;
+						y = newY;
+						break;
+					}
+				}
+
+				if (i === 8) break; // No black pixel found
+			} while (!(x === startX && y === startY) && path.length < 10000);
+
+			return path;
+		}
+
+		const paths = [];
+		for (let y = 0; y < canvas.height; y++) {
+			for (let x = 0; x < canvas.width; x++) {
+				if (getPixel(x, y) === 0 && getPixel(x - 1, y) === 255) {
+					paths.push(walkPerimeter(x, y));
+				}
+			}
+		}
+
+		// Generate SVG
 		const svgNS = 'http://www.w3.org/2000/svg';
 		const svg = document.createElementNS(svgNS, 'svg');
 		svg.setAttribute('width', canvas.width);
 		svg.setAttribute('height', canvas.height);
 		svg.setAttribute('xmlns', svgNS);
 
-		if (points.length < 2) return '';
-
-		const group = document.createElementNS(svgNS, 'g');
-
-		// Function to create a smooth path
-		function createSmoothPath(points, offset) {
-			let pathData = `M ${points[0].x + offset.x},${points[0].y + offset.y} `;
-
-			for (let i = 1; i < points.length - 2; i++) {
-				const xc = (points[i].x + points[i + 1].x) / 2;
-				const yc = (points[i].y + points[i + 1].y) / 2;
-				pathData += `Q ${points[i].x + offset.x},${points[i].y + offset.y} ${xc + offset.x},${yc + offset.y} `;
+		paths.forEach((path) => {
+			const svgPath = document.createElementNS(svgNS, 'path');
+			let d = `M${path[0].x},${path[0].y}`;
+			for (let i = 1; i < path.length; i++) {
+				d += `L${path[i].x},${path[i].y}`;
 			}
-
-			pathData += `Q ${points[points.length - 2].x + offset.x},${points[points.length - 2].y + offset.y} ${points[points.length - 1].x + offset.x},${points[points.length - 1].y + offset.y}`;
-
-			return pathData;
-		}
-
-		// Create multiple overlapping paths
-		for (let i = 0; i < 5; i++) {
-			const path = document.createElementNS(svgNS, 'path');
-			const offset = {
-				x: (Math.random() - 0.5) * 2,
-				y: (Math.random() - 0.5) * 2,
-			};
-			path.setAttribute('d', createSmoothPath(points, offset));
-			path.setAttribute('fill', 'none');
-			path.setAttribute('stroke', options.lineColor);
-			path.setAttribute('stroke-width', options.lineThickness * 0.4);
-			path.setAttribute('stroke-linecap', 'round');
-			path.setAttribute('stroke-linejoin', 'round');
-			group.appendChild(path);
-		}
-
-		svg.appendChild(group);
+			d += 'Z';
+			svgPath.setAttribute('d', d);
+			svgPath.setAttribute('fill', options.lineColor);
+			svgPath.setAttribute('stroke', 'none');
+			svg.appendChild(svgPath);
+		});
 
 		return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
 	}
