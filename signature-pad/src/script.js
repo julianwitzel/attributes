@@ -13,20 +13,51 @@ function createSignaturePad(wrapper) {
 	let lastThickness;
 	let points = [];
 
-	// settings
-	const lineColor = canvas.dataset.padColor || 'black';
-	const lineThickness = parseInt(canvas.dataset.padThickness) || 3;
-	const lineJoin = canvas.dataset.padLineJoin || 'round';
-	const lineCap = canvas.dataset.padLineCap || 'round';
-	const padScale = parseFloat(canvas.dataset.padScale) || 2;
-	const minThickness = parseFloat(canvas.dataset.padMinThickness) || lineThickness / 2;
-	const maxThickness = parseFloat(canvas.dataset.padMaxThickness) || lineThickness * 2;
-	const minSpeed = parseFloat(canvas.dataset.padMinSpeed) || 0.5;
-	const maxSpeed = parseFloat(canvas.dataset.padMaxSpeed) || 10;
-	const smoothness = parseInt(canvas.dataset.padSmoothness) || 10;
+	// Options object to store all configurable settings
+	let options = {
+		lineColor: canvas.dataset.padColor || 'black',
+		lineThickness: parseInt(canvas.dataset.padThickness) || 3,
+		lineJoin: canvas.dataset.padLineJoin || 'round',
+		lineCap: canvas.dataset.padLineCap || 'round',
+		padScale: parseFloat(canvas.dataset.padScale) || 2,
+		minThickness: parseFloat(canvas.dataset.padMinThickness) || 1.5,
+		maxThickness: parseFloat(canvas.dataset.padMaxThickness) || 6,
+		minSpeed: parseFloat(canvas.dataset.padMinSpeed) || 0.5,
+		maxSpeed: parseFloat(canvas.dataset.padMaxSpeed) || 10,
+		smoothness: parseInt(canvas.dataset.padSmoothness) || 10,
+		saveFormat: canvas.dataset.padSaveFormat || 'png',
+	};
 
 	const recentThicknesses = [];
-	const maxRecentThicknesses = smoothness;
+
+	function setOptions(newOptions) {
+		Object.assign(options, newOptions);
+
+		// Update canvas attributes
+		Object.keys(options).forEach((key) => {
+			canvas.dataset[`pad${key.charAt(0).toUpperCase() + key.slice(1)}`] = options[key];
+		});
+
+		// Reinitialize the pad with new settings
+		initializePad();
+
+		// If there's an existing signature, redraw it with new settings
+		if (hasSignature) {
+			redrawSignature();
+		}
+	}
+
+	function redrawSignature() {
+		const tempCanvas = document.createElement('canvas');
+		const tempCtx = tempCanvas.getContext('2d');
+		tempCanvas.width = canvas.width;
+		tempCanvas.height = canvas.height;
+		tempCtx.drawImage(canvas, 0, 0);
+
+		clearPad();
+
+		ctx.drawImage(tempCanvas, 0, 0);
+	}
 
 	function resizeCanvas() {
 		const tempCanvas = document.createElement('canvas');
@@ -38,20 +69,20 @@ function createSignaturePad(wrapper) {
 		const rect = canvas.getBoundingClientRect();
 
 		if (!initialWidth || !initialHeight) {
-			canvas.width = rect.width * padScale;
-			canvas.height = rect.height * padScale;
+			canvas.width = rect.width * options.padScale;
+			canvas.height = rect.height * options.padScale;
 			initialWidth = rect.width;
 			initialHeight = rect.height;
 		} else {
-			canvas.width = initialWidth * padScale;
-			canvas.height = initialHeight * padScale;
+			canvas.width = initialWidth * options.padScale;
+			canvas.height = initialHeight * options.padScale;
 		}
 
-		ctx.lineWidth = lineThickness * padScale;
-		ctx.lineJoin = lineJoin;
-		ctx.lineCap = lineCap;
-		ctx.strokeStyle = lineColor;
-		ctx.fillStyle = lineColor;
+		ctx.lineWidth = options.lineThickness * options.padScale;
+		ctx.lineJoin = options.lineJoin;
+		ctx.lineCap = options.lineCap;
+		ctx.strokeStyle = options.lineColor;
+		ctx.fillStyle = options.lineColor;
 		ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
 	}
 
@@ -60,7 +91,7 @@ function createSignaturePad(wrapper) {
 		hiddenInput.value = '';
 		hasSignature = false;
 		points = [];
-		lastThickness = maxThickness;
+		lastThickness = options.maxThickness;
 		recentThicknesses.length = 0;
 		activePointers = 0;
 		initialPointerId = null;
@@ -76,7 +107,7 @@ function createSignaturePad(wrapper) {
 	function getLineThickness(x, y, timestamp) {
 		if (lastTimestamp === 0) {
 			lastTimestamp = timestamp;
-			return maxThickness;
+			return options.maxThickness;
 		}
 
 		const dx = x - lastX;
@@ -84,12 +115,12 @@ function createSignaturePad(wrapper) {
 		const dt = timestamp - lastTimestamp;
 		const speed = Math.sqrt(dx * dx + dy * dy) / dt;
 
-		const normalizedSpeed = Math.min(Math.max((speed - minSpeed) / (maxSpeed - minSpeed), 0), 1);
-		const thicknessRange = maxThickness - minThickness;
-		const targetThickness = maxThickness - normalizedSpeed * thicknessRange;
+		const normalizedSpeed = Math.min(Math.max((speed - options.minSpeed) / (options.maxSpeed - options.minSpeed), 0), 1);
+		const thicknessRange = options.maxThickness - options.minThickness;
+		const targetThickness = options.maxThickness - normalizedSpeed * thicknessRange;
 
 		recentThicknesses.push(targetThickness);
-		if (recentThicknesses.length > maxRecentThicknesses) {
+		if (recentThicknesses.length > options.smoothness) {
 			recentThicknesses.shift();
 		}
 
@@ -138,7 +169,7 @@ function createSignaturePad(wrapper) {
 			writingMode = false;
 			canvas.classList.remove('signing');
 			if (hasSignature) {
-				const imageURL = canvas.toDataURL();
+				const imageURL = getImageDataURL();
 				if (!hiddenInput) {
 					hiddenInput = document.createElement('input');
 					hiddenInput.type = 'hidden';
@@ -161,10 +192,10 @@ function createSignaturePad(wrapper) {
 			recentThicknesses.length = 0;
 			[lastX, lastY] = getTargetPosition(event);
 			lastTimestamp = event.timeStamp;
-			lastThickness = maxThickness;
+			lastThickness = options.maxThickness;
 
 			ctx.beginPath();
-			ctx.arc(lastX, lastY, maxThickness / 2, 0, Math.PI * 2);
+			ctx.arc(lastX, lastY, options.maxThickness / 2, 0, Math.PI * 2);
 			ctx.fill();
 
 			hasSignature = true;
@@ -174,6 +205,47 @@ function createSignaturePad(wrapper) {
 
 	function preventDefault(event) {
 		event.preventDefault();
+	}
+
+	function getImageDataURL() {
+		switch (options.saveFormat.toLowerCase()) {
+			case 'jpg':
+			case 'jpeg':
+				return canvas.toDataURL('image/jpeg');
+			case 'svg':
+				return canvasToSVG(canvas);
+			case 'png':
+			default:
+				return canvas.toDataURL('image/png');
+		}
+	}
+
+	function canvasToSVG(canvas) {
+		const svgNS = 'http://www.w3.org/2000/svg';
+		const svg = document.createElementNS(svgNS, 'svg');
+		svg.setAttribute('width', canvas.width);
+		svg.setAttribute('height', canvas.height);
+
+		const path = document.createElementNS(svgNS, 'path');
+		path.setAttribute('fill', 'none');
+		path.setAttribute('stroke', options.lineColor);
+		path.setAttribute('stroke-width', options.lineThickness);
+		path.setAttribute('stroke-linecap', options.lineCap);
+		path.setAttribute('stroke-linejoin', options.lineJoin);
+
+		let d = '';
+		points.forEach((point, index) => {
+			if (index === 0) {
+				d += `M${point.x},${point.y}`;
+			} else {
+				d += `L${point.x},${point.y}`;
+			}
+		});
+
+		path.setAttribute('d', d);
+		svg.appendChild(path);
+
+		return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
 	}
 
 	function initializePad() {
@@ -212,8 +284,10 @@ function createSignaturePad(wrapper) {
 		return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
 	}
 
-	initializePad();
+	wrapper.setOptions = setOptions;
 	wrapper.initializeSignaturePad = initializePad;
+
+	initializePad();
 
 	window.addEventListener('resize', throttle(initializePad, 250));
 
