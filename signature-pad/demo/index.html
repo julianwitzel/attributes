@@ -5,7 +5,7 @@
 		<meta
 			name="viewport"
 			content="width=device-width, initial-scale=1.0" />
-		<title>VIERLESS Attributes | Signature-Pad Demo</title>
+		<title>VIERLESS Attributes | Signature-Pad Demo</title>
 
 		<style>
 			body {
@@ -23,7 +23,8 @@
 				border-radius: 5px;
 				box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 			}
-			h1 {
+			h1,
+			h2 {
 				color: #333;
 			}
 			button {
@@ -38,17 +39,27 @@
 			button:hover {
 				background-color: #0056b3;
 			}
-			#colorPicker {
-				margin-right: 10px;
-			}
-			#saveFormatSelect {
-				padding: 10px;
-				margin-right: 10px;
-			}
 			#signatureImage {
 				max-width: 100%;
 				border: 1px solid #ccc;
 				margin-top: 20px;
+			}
+			.options-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+				gap: 10px;
+				margin-bottom: 20px;
+			}
+			.option-item {
+				display: flex;
+				flex-direction: column;
+			}
+			.option-item label {
+				margin-bottom: 5px;
+			}
+			.option-item input,
+			.option-item select {
+				padding: 5px;
 			}
 		</style>
 
@@ -56,21 +67,131 @@
 		<link
 			rel="stylesheet"
 			href="https://cdn.jsdelivr.net/gh/vierless/attributes@latest/signature-pad/src/styles.css" />
-		<script src="https://cdn.jsdelivr.net/gh/vierless/attributes@1469399f01d282ef16167ca9c9d3b9dd89ba40c9/signature-pad/src/script.js"></script>
+		<script src="https://cdn.jsdelivr.net/gh/vierless/attributes@c531f68b04c134768bc6e2f12d8bd750caf22a01/signature-pad/src/script.js"></script>
 	</head>
 	<body>
 		<div class="container">
 			<h1>Signature Pad Demo</h1>
+
+			<h2>Options</h2>
+			<div class="options-grid">
+				<div class="option-item">
+					<label for="lineColor">Line Color:</label>
+					<input
+						type="color"
+						id="lineColor"
+						value="#000000" />
+				</div>
+				<div class="option-item">
+					<label for="lineThickness">Line Thickness:</label>
+					<input
+						type="number"
+						id="lineThickness"
+						value="3"
+						min="1"
+						max="20" />
+				</div>
+				<div class="option-item">
+					<label for="lineJoin">Line Join:</label>
+					<select id="lineJoin">
+						<option value="round">Round</option>
+						<option value="bevel">Bevel</option>
+						<option value="miter">Miter</option>
+					</select>
+				</div>
+				<div class="option-item">
+					<label for="lineCap">Line Cap:</label>
+					<select id="lineCap">
+						<option value="round">Round</option>
+						<option value="butt">Butt</option>
+						<option value="square">Square</option>
+					</select>
+				</div>
+				<div class="option-item">
+					<label for="padScale">Pad Scale:</label>
+					<input
+						type="number"
+						id="padScale"
+						value="2"
+						min="1"
+						max="5"
+						step="0.5" />
+				</div>
+				<div class="option-item">
+					<label for="minThickness">Min Thickness:</label>
+					<input
+						type="number"
+						id="minThickness"
+						value="1.5"
+						min="0.1"
+						max="10"
+						step="0.1" />
+				</div>
+				<div class="option-item">
+					<label for="maxThickness">Max Thickness:</label>
+					<input
+						type="number"
+						id="maxThickness"
+						value="6"
+						min="1"
+						max="20"
+						step="0.1" />
+				</div>
+				<div class="option-item">
+					<label for="minSpeed">Min Speed:</label>
+					<input
+						type="number"
+						id="minSpeed"
+						value="0.5"
+						min="0"
+						max="5"
+						step="0.1" />
+				</div>
+				<div class="option-item">
+					<label for="maxSpeed">Max Speed:</label>
+					<input
+						type="number"
+						id="maxSpeed"
+						value="10"
+						min="1"
+						max="20"
+						step="0.1" />
+				</div>
+				<div class="option-item">
+					<label for="smoothness">Smoothness:</label>
+					<input
+						type="number"
+						id="smoothness"
+						value="10"
+						min="1"
+						max="20" />
+				</div>
+				<div class="option-item">
+					<label for="speedSensitivity">Speed Sensitivity:</label>
+					<input
+						type="number"
+						id="speedSensitivity"
+						value="2"
+						min="0.1"
+						max="5"
+						step="0.1" />
+				</div>
+				<div class="option-item">
+					<label for="saveFormat">Save Format:</label>
+					<select id="saveFormat">
+						<option value="png">PNG</option>
+						<option value="jpg">JPG</option>
+						<option value="svg">SVG</option>
+					</select>
+				</div>
+			</div>
 
 			<div
 				class="signature-pad_wrapper"
 				data-pad="wrapper">
 				<canvas
 					class="signature-pad"
-					id="mySignature"
-					data-pad-color="#000"
-					data-pad-thickness="3"
-					data-pad-speed-sensitivity="2"></canvas>
+					id="mySignature"></canvas>
 				<input
 					type="hidden"
 					id="signatureInput" />
@@ -80,15 +201,6 @@
 						data-pad="clear">
 						Clear
 					</button>
-					<input
-						type="color"
-						id="colorPicker"
-						value="#000000" />
-					<select id="saveFormatSelect">
-						<option value="png">PNG</option>
-						<option value="jpg">JPG</option>
-						<option value="svg">SVG</option>
-					</select>
 					<button
 						type="button"
 						id="saveButton">
@@ -107,20 +219,33 @@
 		</div>
 
 		<script>
-			// Demo-specific code
 			document.addEventListener('DOMContentLoaded', function () {
 				const wrapper = document.querySelector('[data-pad="wrapper"]');
-				const colorPicker = document.getElementById('colorPicker');
-				const saveFormatSelect = document.getElementById('saveFormatSelect');
 				const saveButton = document.getElementById('saveButton');
 				const signatureImage = document.getElementById('signatureImage');
 
-				colorPicker.addEventListener('change', function () {
-					wrapper.setOptions({ lineColor: this.value });
-				});
+				// Function to update options
+				function updateOptions() {
+					const options = {
+						lineColor: document.getElementById('lineColor').value,
+						lineThickness: parseFloat(document.getElementById('lineThickness').value),
+						lineJoin: document.getElementById('lineJoin').value,
+						lineCap: document.getElementById('lineCap').value,
+						padScale: parseFloat(document.getElementById('padScale').value),
+						minThickness: parseFloat(document.getElementById('minThickness').value),
+						maxThickness: parseFloat(document.getElementById('maxThickness').value),
+						minSpeed: parseFloat(document.getElementById('minSpeed').value),
+						maxSpeed: parseFloat(document.getElementById('maxSpeed').value),
+						smoothness: parseInt(document.getElementById('smoothness').value),
+						speedSensitivity: parseFloat(document.getElementById('speedSensitivity').value),
+						saveFormat: document.getElementById('saveFormat').value,
+					};
+					wrapper.setOptions(options);
+				}
 
-				saveFormatSelect.addEventListener('change', function () {
-					wrapper.setOptions({ saveFormat: this.value });
+				// Add event listeners to all inputs
+				document.querySelectorAll('.options-grid input, .options-grid select').forEach((input) => {
+					input.addEventListener('change', updateOptions);
 				});
 
 				saveButton.addEventListener('click', function () {
@@ -132,6 +257,9 @@
 						alert('Please sign before saving.');
 					}
 				});
+
+				// Initial update
+				updateOptions();
 			});
 		</script>
 	</body>

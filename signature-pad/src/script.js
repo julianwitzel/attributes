@@ -233,23 +233,66 @@ function createSignaturePad(wrapper) {
 		svg.setAttribute('width', canvas.width);
 		svg.setAttribute('height', canvas.height);
 
-		const path = document.createElementNS(svgNS, 'path');
-		path.setAttribute('fill', 'none');
-		path.setAttribute('stroke', options.lineColor);
-		path.setAttribute('stroke-width', options.lineThickness);
-		path.setAttribute('stroke-linecap', options.lineCap);
-		path.setAttribute('stroke-linejoin', options.lineJoin);
+		if (points.length < 2) return '';
 
-		let d = '';
-		points.forEach((point, index) => {
-			if (index === 0) {
-				d += `M${point.x},${point.y}`;
+		let pathData = '';
+		let prevX, prevY, prevThickness;
+
+		for (let i = 0; i < points.length; i++) {
+			const point = points[i];
+			const x = point.x;
+			const y = point.y;
+			const thickness = point.thickness / 2;
+
+			if (i === 0) {
+				pathData += `M ${x - thickness} ${y}`;
 			} else {
-				d += `L${point.x},${point.y}`;
-			}
-		});
+				const angle = Math.atan2(y - prevY, x - prevX);
 
-		path.setAttribute('d', d);
+				const ox1 = prevX - prevThickness * Math.sin(angle);
+				const oy1 = prevY + prevThickness * Math.cos(angle);
+				const ox2 = x - thickness * Math.sin(angle);
+				const oy2 = y + thickness * Math.cos(angle);
+
+				pathData += ` Q ${prevX} ${prevY} ${(ox1 + ox2) / 2} ${(oy1 + oy2) / 2}`;
+			}
+
+			prevX = x;
+			prevY = y;
+			prevThickness = thickness;
+		}
+
+		for (let i = points.length - 1; i >= 0; i--) {
+			const point = points[i];
+			const x = point.x;
+			const y = point.y;
+			const thickness = point.thickness / 2;
+
+			if (i === points.length - 1) {
+				pathData += ` L ${x + thickness} ${y}`;
+			} else {
+				const angle = Math.atan2(y - prevY, x - prevX);
+
+				const ox1 = prevX + prevThickness * Math.sin(angle);
+				const oy1 = prevY - prevThickness * Math.cos(angle);
+				const ox2 = x + thickness * Math.sin(angle);
+				const oy2 = y - thickness * Math.cos(angle);
+
+				pathData += ` Q ${prevX} ${prevY} ${(ox1 + ox2) / 2} ${(oy1 + oy2) / 2}`;
+			}
+
+			prevX = x;
+			prevY = y;
+			prevThickness = thickness;
+		}
+
+		pathData += ' Z';
+
+		const path = document.createElementNS(svgNS, 'path');
+		path.setAttribute('d', pathData);
+		path.setAttribute('fill', options.lineColor);
+		path.setAttribute('stroke', 'none');
+
 		svg.appendChild(path);
 
 		return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
