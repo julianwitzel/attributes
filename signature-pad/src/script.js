@@ -9,6 +9,7 @@ function createSignaturePad(wrapper) {
 	let initialWidth, initialHeight;
 	let lastTimestamp = 0;
 	let activePointers = 0;
+	let initialPointerId = null;
 	let lastThickness;
 	let points = [];
 
@@ -61,6 +62,8 @@ function createSignaturePad(wrapper) {
 		points = [];
 		lastThickness = maxThickness;
 		recentThicknesses.length = 0;
+		activePointers = 0;
+		initialPointerId = null;
 	}
 
 	function getTargetPosition(event) {
@@ -98,7 +101,7 @@ function createSignaturePad(wrapper) {
 	}
 
 	function handlePointerMove(event) {
-		if (!writingMode || activePointers > 1) return;
+		if (!writingMode || event.pointerId !== initialPointerId) return;
 		event.preventDefault();
 
 		const [positionX, positionY] = getTargetPosition(event);
@@ -129,9 +132,9 @@ function createSignaturePad(wrapper) {
 		hasSignature = true;
 	}
 
-	function handlePointerUp() {
+	function handlePointerUp(event) {
 		activePointers = Math.max(0, activePointers - 1);
-		if (activePointers === 0) {
+		if (event.pointerId === initialPointerId) {
 			writingMode = false;
 			canvas.classList.remove('signing');
 			if (hasSignature) {
@@ -145,29 +148,28 @@ function createSignaturePad(wrapper) {
 				hiddenInput.value = imageURL;
 			}
 			points = [];
+			initialPointerId = null;
 		}
 	}
 
 	function handlePointerDown(event) {
 		activePointers++;
-		if (activePointers > 1) {
-			writingMode = false;
-			return;
+		if (activePointers === 1) {
+			initialPointerId = event.pointerId;
+			writingMode = true;
+			points = [];
+			recentThicknesses.length = 0;
+			[lastX, lastY] = getTargetPosition(event);
+			lastTimestamp = event.timeStamp;
+			lastThickness = maxThickness;
+
+			ctx.beginPath();
+			ctx.arc(lastX, lastY, maxThickness / 2, 0, Math.PI * 2);
+			ctx.fill();
+
+			hasSignature = true;
+			canvas.classList.add('signing');
 		}
-
-		writingMode = true;
-		points = [];
-		recentThicknesses.length = 0;
-		[lastX, lastY] = getTargetPosition(event);
-		lastTimestamp = event.timeStamp;
-		lastThickness = maxThickness;
-
-		ctx.beginPath();
-		ctx.arc(lastX, lastY, maxThickness / 2, 0, Math.PI * 2);
-		ctx.fill();
-
-		hasSignature = true;
-		canvas.classList.add('signing');
 	}
 
 	function preventDefault(event) {
@@ -190,7 +192,15 @@ function createSignaturePad(wrapper) {
 		canvas.addEventListener('pointerup', handlePointerUp, { passive: true });
 		canvas.addEventListener('pointercancel', handlePointerUp, { passive: true });
 		canvas.addEventListener('pointermove', handlePointerMove, { passive: false });
-		canvas.addEventListener('pointerleave', handlePointerUp, { passive: true });
+		canvas.addEventListener(
+			'pointerleave',
+			(event) => {
+				if (event.pointerId === initialPointerId) {
+					handlePointerUp(event);
+				}
+			},
+			{ passive: true }
+		);
 
 		canvas.addEventListener('touchstart', preventDefault, { passive: false });
 		canvas.addEventListener('touchmove', preventDefault, { passive: false });
