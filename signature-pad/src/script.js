@@ -238,25 +238,56 @@ function createSignaturePad(wrapper) {
 		if (points.length < 2) return '';
 
 		let pathData = '';
+		let lastX, lastY, lastThickness;
 
-		for (let i = 0; i < points.length - 1; i++) {
-			const p1 = points[i];
-			const p2 = points[i + 1];
+		for (let i = 0; i < points.length; i++) {
+			const p = points[i];
+			const halfThickness = p.thickness / 2;
 
 			if (i === 0) {
-				pathData += `M ${p1.x},${p1.y} `;
+				pathData += `M ${p.x - halfThickness},${p.y} `;
+			} else {
+				const cp1x = lastX;
+				const cp1y = lastY;
+				const cp2x = p.x;
+				const cp2y = p.y;
+
+				// Top edge of the stroke
+				pathData += `C ${cp1x},${lastY - lastThickness / 2} ${cp2x},${p.y - halfThickness} ${p.x},${p.y - halfThickness} `;
 			}
 
-			pathData += `L ${p2.x},${p2.y} `;
+			lastX = p.x;
+			lastY = p.y;
+			lastThickness = p.thickness;
 		}
+
+		// Bottom edge of the stroke (in reverse)
+		for (let i = points.length - 1; i >= 0; i--) {
+			const p = points[i];
+			const halfThickness = p.thickness / 2;
+
+			if (i === points.length - 1) {
+				pathData += `L ${p.x},${p.y + halfThickness} `;
+			} else {
+				const cp1x = lastX;
+				const cp1y = lastY;
+				const cp2x = p.x;
+				const cp2y = p.y;
+
+				pathData += `C ${cp1x},${lastY + lastThickness / 2} ${cp2x},${p.y + halfThickness} ${p.x},${p.y + halfThickness} `;
+			}
+
+			lastX = p.x;
+			lastY = p.y;
+			lastThickness = p.thickness;
+		}
+
+		pathData += 'Z'; // Close the path
 
 		const path = document.createElementNS(svgNS, 'path');
 		path.setAttribute('d', pathData);
-		path.setAttribute('fill', 'none');
-		path.setAttribute('stroke', options.lineColor);
-		path.setAttribute('stroke-width', options.lineThickness);
-		path.setAttribute('stroke-linecap', options.lineCap);
-		path.setAttribute('stroke-linejoin', options.lineJoin);
+		path.setAttribute('fill', options.lineColor);
+		path.setAttribute('stroke', 'none');
 
 		svg.appendChild(path);
 
