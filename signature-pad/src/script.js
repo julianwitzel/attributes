@@ -232,70 +232,65 @@ function createSignaturePad(wrapper) {
 		const ctx = canvas.getContext('2d');
 		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 		const data = imageData.data;
-		const threshold = 200; // Adjust this value to fine-tune the tracing sensitivity
-
-		function getPixel(x, y) {
-			if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) {
-				return 255;
-			}
-			const i = (y * canvas.width + x) * 4;
-			return data[i] < threshold ? 0 : 255;
-		}
-
-		function walkPerimeter(startX, startY) {
-			const path = [];
-			let x = startX;
-			let y = startY;
-			const dirs = [
-				[-1, 0],
-				[-1, 1],
-				[0, 1],
-				[1, 1],
-				[1, 0],
-				[1, -1],
-				[0, -1],
-				[-1, -1],
-			];
-			let dir = 0;
-
-			do {
-				path.push({ x, y });
-				let newX, newY, newDir;
-
-				for (let i = 0; i < 8; i++) {
-					newDir = (dir + i) % 8;
-					newX = x + dirs[newDir][0];
-					newY = y + dirs[newDir][1];
-
-					if (getPixel(newX, newY) === 0) {
-						dir = newDir;
-						x = newX;
-						y = newY;
-						break;
-					}
-				}
-
-				if (i === 8) break; // No black pixel found
-			} while (!(x === startX && y === startY) && path.length < 10000);
-
-			return path;
-		}
-
-		const paths = [];
-		for (let y = 0; y < canvas.height; y++) {
-			for (let x = 0; x < canvas.width; x++) {
-				if (getPixel(x, y) === 0 && getPixel(x - 1, y) === 255) {
-					paths.push(walkPerimeter(x, y));
-				}
-			}
-		}
-
-		// Generate SVG
 		const svgNS = 'http://www.w3.org/2000/svg';
 		const svg = document.createElementNS(svgNS, 'svg');
 		svg.setAttribute('width', canvas.width);
 		svg.setAttribute('height', canvas.height);
 		svg.setAttribute('xmlns', svgNS);
+
+		const paths = [];
+		const threshold = 200; // Adjust this value to fine-tune tracing sensitivity
+
+		function getPixel(x, y) {
+			if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return 255;
+			const i = (y * canvas.width + x) * 4;
+			return data[i] < threshold ? 0 : 255;
+		}
+
+		function tracePath(startX, startY) {
+			const path = [];
+			let x = startX,
+				y = startY;
+			const directions = [
+				[1, 0],
+				[1, 1],
+				[0, 1],
+				[-1, 1],
+				[-1, 0],
+				[-1, -1],
+				[0, -1],
+				[1, -1],
+			];
+			let dir = 0;
+
+			do {
+				path.push({ x, y });
+				let found = false;
+				for (let i = 0; i < 8; i++) {
+					const newDir = (dir + i) % 8;
+					const newX = x + directions[newDir][0];
+					const newY = y + directions[newDir][1];
+					if (getPixel(newX, newY) === 0) {
+						dir = newDir;
+						x = newX;
+						y = newY;
+						found = true;
+						break;
+					}
+				}
+				if (!found) break;
+			} while (!(x === startX && y === startY) && path.length < 10000);
+
+			return path;
+		}
+
+		for (let y = 0; y < canvas.height; y++) {
+			for (let x = 0; x < canvas.width; x++) {
+				if (getPixel(x, y) === 0 && getPixel(x - 1, y) === 255) {
+					paths.push(tracePath(x, y));
+				}
+			}
+		}
 
 		paths.forEach((path) => {
 			const svgPath = document.createElementNS(svgNS, 'path');
