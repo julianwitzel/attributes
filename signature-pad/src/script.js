@@ -11,6 +11,7 @@ function createSignaturePad(wrapper) {
 	let activePointers = 0;
 	let initialPointerId = null;
 	let points = [];
+	let drawingOperations = [];
 
 	let options = {
 		lineColor: canvas.dataset.padColor || 'black',
@@ -91,6 +92,7 @@ function createSignaturePad(wrapper) {
 		recentThicknesses.length = 0;
 		activePointers = 0;
 		initialPointerId = null;
+		drawingOperations = [];
 	}
 
 	function getTargetPosition(event) {
@@ -157,6 +159,14 @@ function createSignaturePad(wrapper) {
 			[lastX, lastY] = [positionX, positionY];
 		}
 
+		drawingOperations.push({
+			type: 'lineTo',
+			x: positionX,
+			y: positionY,
+			lineWidth: thickness,
+			strokeStyle: ctx.strokeStyle,
+		});
+
 		hasSignature = true;
 	}
 
@@ -196,6 +206,14 @@ function createSignaturePad(wrapper) {
 
 			hasSignature = true;
 			canvas.classList.add('signing');
+
+			drawingOperations.push({
+				type: 'moveTo',
+				x: lastX,
+				y: lastY,
+				lineWidth: ctx.lineWidth,
+				strokeStyle: ctx.strokeStyle,
+			});
 		}
 	}
 
@@ -221,7 +239,7 @@ function createSignaturePad(wrapper) {
 
 				return jpgCanvas.toDataURL('image/jpeg');
 			case 'svg':
-				return canvasToSVG(canvas, points);
+				return canvasToSVG(canvas);
 			case 'png':
 			default:
 				return canvas.toDataURL('image/png');
@@ -229,45 +247,43 @@ function createSignaturePad(wrapper) {
 	}
 
 	function canvasToSVG(canvas) {
-		const ctx = canvas.getContext('2d');
 		const svgNS = 'http://www.w3.org/2000/svg';
 		const svg = document.createElementNS(svgNS, 'svg');
 		svg.setAttribute('width', canvas.width);
 		svg.setAttribute('height', canvas.height);
 		svg.setAttribute('xmlns', svgNS);
 
-		const path = document.createElementNS(svgNS, 'path');
-		let d = '';
-		let isFirstPoint = true;
+		let currentPath = null;
+		let pathData = '';
 
-		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-		const data = imageData.data;
-		const threshold = 200;
-
-		for (let y = 0; y < canvas.height; y++) {
-			for (let x = 0; x < canvas.width; x++) {
-				const index = (y * canvas.width + x) * 4;
-				if (data[index] < threshold) {
-					if (isFirstPoint) {
-						d += `M${x},${y}`;
-						isFirstPoint = false;
-					} else {
-						d += `L${x},${y}`;
-					}
+		drawingOperations.forEach((op, index) => {
+			if (op.type === 'moveTo' || (index > 0 && op.lineWidth !== drawingOperations[index - 1].lineWidth)) {
+				if (currentPath) {
+					currentPath.setAttribute('d', pathData);
+					svg.appendChild(currentPath);
 				}
+
+				currentPath = document.createElementNS(svgNS, 'path');
+				currentPath.setAttribute('fill', 'none');
+				currentPath.setAttribute('stroke', op.strokeStyle);
+				currentPath.setAttribute('stroke-width', op.lineWidth);
+				currentPath.setAttribute('stroke-linecap', 'round');
+				currentPath.setAttribute('stroke-linejoin', 'round');
+
+				pathData = `M${op.x},${op.y}`;
+			} else if (op.type === 'lineTo') {
+				pathData += `L${op.x},${op.y}`;
 			}
+		});
+
+		if (currentPath) {
+			currentPath.setAttribute('d', pathData);
+			svg.appendChild(currentPath);
 		}
 
-		path.setAttribute('d', d);
-		path.setAttribute('fill', 'none');
-		path.setAttribute('stroke', options.lineColor);
-		path.setAttribute('stroke-width', '1');
-		path.setAttribute('stroke-linecap', 'round');
-		path.setAttribute('stroke-linejoin', 'round');
-
-		svg.appendChild(path);
-
-		return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
+		if (drawingOperations.length === 0) {
+			return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
+		}
 	}
 
 	function initializePad() {
