@@ -177,6 +177,7 @@ function createSignaturePad(wrapper) {
 			canvas.classList.remove('signing');
 			if (hasSignature) {
 				const imageURL = getImageDataURL();
+				console.log('Image URL:', imageURL);
 				if (!hiddenInput) {
 					hiddenInput = document.createElement('input');
 					hiddenInput.type = 'hidden';
@@ -184,6 +185,7 @@ function createSignaturePad(wrapper) {
 				}
 				hiddenInput.name = 'signaturePad_' + canvas.id;
 				hiddenInput.value = imageURL;
+				console.log('Hidden input value:', hiddenInput.value);
 			}
 			initialPointerId = null;
 		}
@@ -223,7 +225,7 @@ function createSignaturePad(wrapper) {
 
 	function getImageDataURL() {
 		console.log('Save format:', options.saveFormat);
-		console.log('Number of points:', points.length);
+		console.log('Number of drawing operations:', drawingOperations.length);
 		switch (options.saveFormat.toLowerCase()) {
 			case 'jpg':
 			case 'jpeg':
@@ -239,7 +241,9 @@ function createSignaturePad(wrapper) {
 
 				return jpgCanvas.toDataURL('image/jpeg');
 			case 'svg':
-				return canvasToSVG(canvas);
+				const svgData = canvasToSVG(canvas);
+				console.log('SVG data:', svgData);
+				return svgData;
 			case 'png':
 			default:
 				return canvas.toDataURL('image/png');
@@ -247,42 +251,54 @@ function createSignaturePad(wrapper) {
 	}
 
 	function canvasToSVG(canvas) {
-		const svgNS = 'http://www.w3.org/2000/svg';
-		const svg = document.createElementNS(svgNS, 'svg');
-		svg.setAttribute('width', canvas.width);
-		svg.setAttribute('height', canvas.height);
-		svg.setAttribute('xmlns', svgNS);
+		try {
+			console.log('Entering canvasToSVG function');
+			const svgNS = 'http://www.w3.org/2000/svg';
+			const svg = document.createElementNS(svgNS, 'svg');
+			svg.setAttribute('width', canvas.width);
+			svg.setAttribute('height', canvas.height);
+			svg.setAttribute('xmlns', svgNS);
 
-		let currentPath = null;
-		let pathData = '';
-
-		drawingOperations.forEach((op, index) => {
-			if (op.type === 'moveTo' || (index > 0 && op.lineWidth !== drawingOperations[index - 1].lineWidth)) {
-				if (currentPath) {
-					currentPath.setAttribute('d', pathData);
-					svg.appendChild(currentPath);
-				}
-
-				currentPath = document.createElementNS(svgNS, 'path');
-				currentPath.setAttribute('fill', 'none');
-				currentPath.setAttribute('stroke', op.strokeStyle);
-				currentPath.setAttribute('stroke-width', op.lineWidth);
-				currentPath.setAttribute('stroke-linecap', 'round');
-				currentPath.setAttribute('stroke-linejoin', 'round');
-
-				pathData = `M${op.x},${op.y}`;
-			} else if (op.type === 'lineTo') {
-				pathData += `L${op.x},${op.y}`;
+			if (drawingOperations.length === 0) {
+				console.log('No drawing operations found');
+				return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
 			}
-		});
 
-		if (currentPath) {
-			currentPath.setAttribute('d', pathData);
-			svg.appendChild(currentPath);
-		}
+			let currentPath = null;
+			let pathData = '';
 
-		if (drawingOperations.length === 0) {
-			return 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(svg));
+			drawingOperations.forEach((op, index) => {
+				console.log(`Processing operation ${index}:`, op);
+				if (op.type === 'moveTo' || (index > 0 && op.lineWidth !== drawingOperations[index - 1].lineWidth)) {
+					if (currentPath) {
+						currentPath.setAttribute('d', pathData);
+						svg.appendChild(currentPath);
+					}
+
+					currentPath = document.createElementNS(svgNS, 'path');
+					currentPath.setAttribute('fill', 'none');
+					currentPath.setAttribute('stroke', op.strokeStyle);
+					currentPath.setAttribute('stroke-width', op.lineWidth);
+					currentPath.setAttribute('stroke-linecap', 'round');
+					currentPath.setAttribute('stroke-linejoin', 'round');
+
+					pathData = `M${op.x},${op.y}`;
+				} else if (op.type === 'lineTo') {
+					pathData += `L${op.x},${op.y}`;
+				}
+			});
+
+			if (currentPath) {
+				currentPath.setAttribute('d', pathData);
+				svg.appendChild(currentPath);
+			}
+
+			const svgString = new XMLSerializer().serializeToString(svg);
+			console.log('Generated SVG string:', svgString);
+			return 'data:image/svg+xml;base64,' + btoa(svgString);
+		} catch (error) {
+			console.error('Error generating SVG:', error);
+			return '';
 		}
 	}
 
