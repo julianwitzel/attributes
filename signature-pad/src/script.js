@@ -8,6 +8,7 @@ function createSignaturePad(wrapper) {
 	let hasSignature = false;
 	let initialWidth, initialHeight;
 	let lastTimestamp = 0;
+	let activePointers = 0;
 	let lastThickness;
 	let points = [];
 
@@ -97,7 +98,7 @@ function createSignaturePad(wrapper) {
 	}
 
 	function handlePointerMove(event) {
-		if (!writingMode) return;
+		if (!writingMode || activePointers > 1) return;
 		event.preventDefault();
 
 		const [positionX, positionY] = getTargetPosition(event);
@@ -129,24 +130,30 @@ function createSignaturePad(wrapper) {
 	}
 
 	function handlePointerUp() {
-		writingMode = false;
-		canvas.classList.remove('signing');
-		if (hasSignature) {
-			const imageURL = canvas.toDataURL();
-			if (!hiddenInput) {
-				hiddenInput = document.createElement('input');
-				hiddenInput.type = 'hidden';
-				wrapper.appendChild(hiddenInput);
+		activePointers = Math.max(0, activePointers - 1);
+		if (activePointers === 0) {
+			writingMode = false;
+			canvas.classList.remove('signing');
+			if (hasSignature) {
+				const imageURL = canvas.toDataURL();
+				if (!hiddenInput) {
+					hiddenInput = document.createElement('input');
+					hiddenInput.type = 'hidden';
+					wrapper.appendChild(hiddenInput);
+				}
+				hiddenInput.name = 'signaturePad_' + canvas.id;
+				hiddenInput.value = imageURL;
 			}
-			hiddenInput.name = 'signaturePad_' + canvas.id;
-			hiddenInput.value = imageURL;
+			points = [];
 		}
-		points = [];
 	}
 
 	function handlePointerDown(event) {
-		if (writingMode) return;
-		event.preventDefault();
+		activePointers++;
+		if (activePointers > 1) {
+			writingMode = false;
+			return;
+		}
 
 		writingMode = true;
 		points = [];
@@ -160,7 +167,6 @@ function createSignaturePad(wrapper) {
 		ctx.fill();
 
 		hasSignature = true;
-
 		canvas.classList.add('signing');
 	}
 
@@ -182,9 +188,10 @@ function createSignaturePad(wrapper) {
 		});
 		canvas.addEventListener('pointerdown', handlePointerDown, { passive: false });
 		canvas.addEventListener('pointerup', handlePointerUp, { passive: true });
-		canvas.addEventListener('pointermove', handlePointerMove, { passive: false });
 		canvas.addEventListener('pointercancel', handlePointerUp, { passive: true });
+		canvas.addEventListener('pointermove', handlePointerMove, { passive: false });
 		canvas.addEventListener('pointerleave', handlePointerUp, { passive: true });
+
 		canvas.addEventListener('touchstart', preventDefault, { passive: false });
 		canvas.addEventListener('touchmove', preventDefault, { passive: false });
 		canvas.addEventListener('touchend', preventDefault, { passive: false });
