@@ -24,25 +24,24 @@ The script works by searching for all elements with the data-pad="wrapper" attri
 ```html
 <!-- Signature Pad Component -->
 <div class="signature-pad_wrapper" data-pad="wrapper">
-	<canvas
-		class="signature-pad"
-		id="mySignature"
-		data-pad-color="#000"
-		data-pad-thickness="3"
-		data-pad-line-join="round"
-		data-pad-line-cap="round"
-		data-pad-scale="2"
-		data-pad-min-thickness="1.5"
-		data-pad-max-thickness="6"
-		data-pad-min-speed="0.5"
-		data-pad-max-speed="10"
-		data-pad-smoothness="10"
-		data-pad-save-format="png"
-		data-pad-speed-sensitivity="1"></canvas>
-	<input type="hidden" />
-	<div class="signature-pad_controls">
-		<button type="button" class="signature-pad_button" data-pad="clear">Clear</button>
-	</div>
+    <canvas
+        class="signature-pad"
+        id="mySignature"
+        data-pad-color="#000"
+        data-pad-line-join="round"
+        data-pad-line-cap="round"
+        data-pad-scale="2"
+        data-pad-min-thickness="1.5"
+        data-pad-max-thickness="6"
+        data-pad-min-speed="0.5"
+        data-pad-max-speed="10"
+        data-pad-smoothness="10"
+        data-pad-save-format="png"
+        data-pad-speed-sensitivity="1"></canvas>
+    <input type="hidden" />
+    <div class="signature-pad_controls">
+        <button type="button" class="signature-pad_button" data-pad="clear">Clear</button>
+    </div>
 </div>
 <!-- End Signature Pad Component -->
 ```
@@ -77,16 +76,24 @@ Alternatively, you can further customize the appearance of the signature pad by 
 
 ```css
 .signature-pad_wrapper {
-	/* your styles */
+    /* your styles */
 }
 canvas.signature-pad {
-	/* your styles */
+    /* your styles */
 }
 .signature-pad_controls {
-	/* your styles */
+    /* your styles */
 }
 .signature-pad_button {
-	/* your styles */
+    /* your styles */
+}
+```
+
+The canvas element also toggles a 'signing' class while the user is actively drawing, which you can use for additional styling:
+
+```css
+canvas.signature-pad.signing {
+    /* styles applied while user is drawing */
 }
 ```
 
@@ -95,9 +102,8 @@ canvas.signature-pad {
 The following options can be set using custom data attributes or via JavaScript:
 
 | Option            | Data Attribute               | Description                                     | Default Value | Value Range               | Recommended                                            |
-| ----------------- | ---------------------------- | ----------------------------------------------- | ------------- | ------------------------- | ------------------------------------------------------ |
+|-------------------|------------------------------|-------------------------------------------------|---------------|---------------------------|--------------------------------------------------------|
 | Line color        | `data-pad-color`             | Sets the line color                             | `'black'`     | Any valid CSS color       | Dark colors for visibility                             |
-| Line thickness    | `data-pad-thickness`         | Sets the base line thickness                    | `3`           | > 0                       | 2-5 for most use cases                                 |
 | Line join         | `data-pad-line-join`         | Defines how lines join together                 | `'round'`     | 'round', 'bevel', 'miter' | 'round' for smooth appearance                          |
 | Line cap          | `data-pad-line-cap`          | Defines the style of the line ends              | `'round'`     | 'round', 'butt', 'square' | 'round' for smooth appearance                          |
 | Pad scale         | `data-pad-scale`             | Sets the canvas scale for higher resolution     | `2`           | > 0                       | 2-4 for balance of quality and performance             |
@@ -109,6 +115,8 @@ The following options can be set using custom data attributes or via JavaScript:
 | Save format       | `data-pad-save-format`       | Format for saving the signature                 | `'png'`       | 'png', 'jpg', 'svg'       | 'png' for lossless quality, 'svg' for scalability      |
 | Speed sensitivity | `data-pad-speed-sensitivity` | Adjusts sensitivity of thickness to speed       | `1`           | > 0                       | 1-3 for natural feel, higher for more dramatic changes |
 
+You can play around with these options and find your perfect configuration in the demo. To do that, download the code and open the index.html file in the demo folder.
+
 ### Dynamically Updating Options
 
 You can update options dynamically using JavaScript:
@@ -116,11 +124,10 @@ You can update options dynamically using JavaScript:
 ```javascript
 const wrapper = document.querySelector('[data-pad="wrapper"]');
 wrapper.setOptions({
-	lineColor: 'blue',
-	lineThickness: 5,
-	saveFormat: 'svg',
-	speedSensitivity: 2,
-	// ... any other options you want to change
+    lineColor: 'blue',
+    saveFormat: 'svg',
+    speedSensitivity: 2,
+    // ... any other options you want to change
 });
 ```
 
@@ -129,25 +136,23 @@ wrapper.setOptions({
 You can create custom buttons to change options on the fly. Here's an example of how to implement color change buttons:
 
 ```html
-<div
-	class="signature-pad_wrapper"
-	data-pad="wrapper">
-	<!-- ... existing signature pad HTML ... -->
-	<div class="signature-pad_color-options">
-		<button type="button" class="color-option" data-color="black">Black</button>
-		<button type="button" class="color-option" data-color="blue">Blue</button>
-		<button type="button" class="color-option" data-color="red">Red</button>
-	</div>
+<div class="signature-pad_wrapper" data-pad="wrapper">
+    <!-- ... existing signature pad HTML ... -->
+    <div class="signature-pad_color-options">
+        <button type="button" class="color-option" data-color="black">Black</button>
+        <button type="button" class="color-option" data-color="blue">Blue</button>
+        <button type="button" class="color-option" data-color="red">Red</button>
+    </div>
 </div>
 ```
 
 ```javascript
 document.querySelectorAll('.color-option').forEach((button) => {
-	button.addEventListener('click', function () {
-		const color = this.dataset.color;
-		const wrapper = this.closest('[data-pad="wrapper"]');
-		wrapper.setOptions({ lineColor: color });
-	});
+    button.addEventListener('click', function () {
+        const color = this.dataset.color;
+        const wrapper = this.closest('[data-pad="wrapper"]');
+        wrapper.setOptions({ lineColor: color });
+    });
 });
 ```
 
@@ -161,7 +166,7 @@ First, ensure that the signature pad wrapper has an ID:
 
 ```html
 <div id="hidden-signature-pad" class="signature-pad_wrapper" data-pad="wrapper" style="display: none;">
-	<!-- ... signature pad contents ... -->
+    <!-- ... signature pad contents ... -->
 </div>
 ```
 
